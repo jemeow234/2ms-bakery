@@ -1,0 +1,181 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useCart } from '@/context/cart-context'
+import { useAuth } from '@/context/auth-context'
+import { Button } from '@/components/ui/button'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Menu, ShoppingBag, User, LogOut } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+const navLinks = [
+  { href: '#home', label: 'Home' },
+  { href: '#about', label: 'About' },
+  { href: '#featured', label: 'Featured' },
+  { href: '#products', label: 'Products' },
+  { href: '#contact', label: 'Contact' },
+]
+
+export function Navbar() {
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('home')
+  const { totalItems } = useCart()
+  const { user, logout } = useAuth()
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50)
+
+      const sections = navLinks.map(link => link.href.replace('#', ''))
+      for (const section of sections.reverse()) {
+        const element = document.getElementById(section)
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          if (rect.top <= 100) {
+            setActiveSection(section)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToSection = (href: string) => {
+    const element = document.getElementById(href.replace('#', ''))
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
+  return (
+    <nav
+      className={cn(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+        isScrolled
+          ? 'bg-card/95 backdrop-blur-md shadow-lg py-3'
+          : 'bg-transparent py-6'
+      )}
+    >
+      <div className="container mx-auto px-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-serif text-xl font-bold">G</span>
+          </div>
+          <span className={cn(
+            'font-serif text-xl font-bold transition-colors duration-300',
+            isScrolled ? 'text-foreground' : 'text-foreground'
+          )}>
+            Golden Crust
+          </span>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-8">
+          {navLinks.map(link => (
+            <button
+              key={link.href}
+              onClick={() => scrollToSection(link.href)}
+              className={cn(
+                'text-sm font-medium transition-all duration-300 hover:text-primary relative',
+                activeSection === link.href.replace('#', '')
+                  ? 'text-primary'
+                  : isScrolled ? 'text-foreground' : 'text-foreground'
+              )}
+            >
+              {link.label}
+              {activeSection === link.href.replace('#', '') && (
+                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <Link href="/checkout">
+            <Button variant="ghost" size="icon" className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+                  {totalItems}
+                </span>
+              )}
+            </Button>
+          </Link>
+
+          {user ? (
+            <div className="flex items-center gap-2">
+              {user.role === 'admin' && (
+                <Link href="/admin">
+                  <Button variant="outline" size="sm" className="hidden sm:flex">
+                    Dashboard
+                  </Button>
+                </Link>
+              )}
+              <Button variant="ghost" size="icon" onClick={logout}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
+          ) : (
+            <Link href="/login">
+              <Button variant="ghost" size="icon">
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
+
+          {/* Mobile Menu */}
+          <Sheet>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72 bg-card">
+              <div className="flex flex-col gap-6 mt-8">
+                {navLinks.map(link => (
+                  <button
+                    key={link.href}
+                    onClick={() => scrollToSection(link.href)}
+                    className={cn(
+                      'text-lg font-medium text-left transition-colors hover:text-primary',
+                      activeSection === link.href.replace('#', '')
+                        ? 'text-primary'
+                        : 'text-foreground'
+                    )}
+                  >
+                    {link.label}
+                  </button>
+                ))}
+                <hr className="border-border" />
+                {user ? (
+                  <>
+                    {user.role === 'admin' && (
+                      <Link href="/admin" className="text-lg font-medium text-foreground hover:text-primary">
+                        Admin Dashboard
+                      </Link>
+                    )}
+                    <button
+                      onClick={logout}
+                      className="text-lg font-medium text-left text-foreground hover:text-primary"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <Link href="/login" className="text-lg font-medium text-foreground hover:text-primary">
+                    Login
+                  </Link>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+    </nav>
+  )
+}
