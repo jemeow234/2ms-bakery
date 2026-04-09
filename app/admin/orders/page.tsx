@@ -280,6 +280,14 @@ export default function OrdersPage() {
                   </p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium text-foreground">{selectedOrder.customerEmail || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-medium text-foreground">{selectedOrder.customerPhone || 'N/A'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">Payment</p>
                   <p className="font-medium text-foreground capitalize">
                     {selectedOrder.paymentMethod}
@@ -287,7 +295,7 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Address</p>
-                  <p className="font-medium text-foreground">{selectedOrder.address}</p>
+                  <p className="font-medium text-foreground">{selectedOrder.address || 'N/A'}</p>
                 </div>
               </div>
 

@@ -19,7 +19,13 @@ export interface User {
   id: string
   email: string
   name: string
+  phone?: string
+  address?: string
   role: 'user' | 'admin'
+}
+
+export interface RegisteredUser extends User {
+  password: string
 }
 
 export interface Order {

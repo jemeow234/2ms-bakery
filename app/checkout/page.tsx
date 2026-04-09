@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/cart-context'
 import { useStore } from '@/context/store-context'
+import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +21,7 @@ import {
   Banknote,
   Loader2,
   CheckCircle2,
+  LogIn,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -27,6 +29,7 @@ import { cn } from '@/lib/utils'
 export default function CheckoutPage() {
   const { items, updateQuantity, removeFromCart, clearCart, totalPrice } = useCart()
   const { addOrder } = useStore()
+  const { user } = useAuth()
   const router = useRouter()
 
   const [step, setStep] = useState<'cart' | 'details' | 'success'>('cart')
@@ -42,6 +45,19 @@ export default function CheckoutPage() {
     paymentMethod: 'card' as 'card' | 'cash',
   })
 
+  // Pre-fill form with user data if logged in
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+      }))
+    }
+  }, [user])
+
   const handleImageError = (productId: string) => {
     setImageErrors(prev => ({ ...prev, [productId]: true }))
   }
@@ -50,25 +66,33 @@ export default function CheckoutPage() {
     e.preventDefault()
     setIsProcessing(true)
 
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 1500))
 
-    const order = addOrder({
-      items,
-      total: totalPrice,
-      customerName: formData.name,
-      customerEmail: formData.email,
-      customerPhone: formData.phone,
-      address: formData.address,
-      status: 'pending',
-      paymentMethod: formData.paymentMethod,
-    })
+    try {
+      const order = addOrder({
+        items: items.map(item => ({
+          product: item.product,
+          quantity: item.quantity
+        })),
+        total: totalPrice,
+        customerName: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        address: formData.address,
+        status: 'pending',
+        paymentMethod: formData.paymentMethod,
+      })
 
-    setOrderNumber(order.id)
-    clearCart()
-    setStep('success')
+      setOrderNumber(order.id)
+      clearCart()
+      setStep('success')
+      toast.success('Order placed successfully!')
+    } catch (error) {
+      toast.error('Failed to place order. Please try again.')
+    }
+
     setIsProcessing(false)
-    toast.success('Order placed successfully!')
   }
 
   if (step === 'success') {
@@ -120,7 +144,20 @@ export default function CheckoutPage() {
             <span className="font-serif text-lg font-bold text-foreground">Golden Crust</span>
           </Link>
 
-          <div className="w-24" />
+          <div className="flex items-center gap-4">
+            {user ? (
+              <span className="text-sm text-muted-foreground">
+                Hi, {user.name.split(' ')[0]}
+              </span>
+            ) : (
+              <Link href="/login">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
@@ -252,9 +289,28 @@ export default function CheckoutPage() {
 
               {step === 'details' && (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <h2 className="font-serif text-2xl font-bold text-foreground mb-6">
-                    Checkout Details
-                  </h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="font-serif text-2xl font-bold text-foreground">
+                      Checkout Details
+                    </h2>
+                    {!user && (
+                      <Link href="/login">
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <LogIn className="h-4 w-4" />
+                          Sign in to auto-fill
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+
+                  {user && (
+                    <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 mb-6">
+                      <p className="text-sm text-muted-foreground">
+                        Logged in as <span className="font-medium text-foreground">{user.name}</span>. 
+                        Your saved details have been auto-filled.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>

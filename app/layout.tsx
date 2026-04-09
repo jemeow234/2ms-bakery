@@ -3,6 +3,7 @@ import { Playfair_Display, Lato } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { CartProvider } from '@/context/cart-context'
 import { AuthProvider } from '@/context/auth-context'
+import { StoreProvider } from '@/context/store-context'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
@@ -40,10 +41,12 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${playfair.variable} ${lato.variable} font-sans antialiased`}>
         <AuthProvider>
-          <CartProvider>
-            {children}
-            <Toaster position="top-right" />
-          </CartProvider>
+          <StoreProvider>
+            <CartProvider>
+              {children}
+              <Toaster position="top-right" />
+            </CartProvider>
+          </StoreProvider>
         </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
