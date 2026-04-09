@@ -29,7 +29,7 @@ export function AdminSidebar() {
 
   const handleLogout = () => {
     logout()
-    router.push('/')
+    router.push('/admin-login')
   }
 
   return (

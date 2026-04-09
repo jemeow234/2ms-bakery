@@ -7,16 +7,14 @@ import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Eye, EyeOff, Loader2, User, Shield } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 type AuthMode = 'login' | 'register'
-type LoginType = 'user' | 'admin'
 
 export default function LoginPage() {
   const [authMode, setAuthMode] = useState<AuthMode>('login')
-  const [loginType, setLoginType] = useState<LoginType>('user')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
@@ -96,13 +94,8 @@ export default function LoginPage() {
   }
 
   const fillDemoCredentials = () => {
-    if (loginType === 'admin') {
-      setLoginEmail('admin@goldencrust.com')
-      setLoginPassword('admin123')
-    } else {
-      setLoginEmail('user@example.com')
-      setLoginPassword('user123')
-    }
+    setLoginEmail('user@example.com')
+    setLoginPassword('user123')
   }
 
   return (
@@ -165,36 +158,6 @@ export default function LoginPage() {
 
           {authMode === 'login' ? (
             <>
-              {/* Login Type Toggle */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setLoginType('user')}
-                  className={cn(
-                    'flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all',
-                    loginType === 'user'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/30'
-                  )}
-                >
-                  <User className="h-5 w-5 text-primary" />
-                  <span className="font-medium">Customer</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginType('admin')}
-                  className={cn(
-                    'flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all',
-                    loginType === 'admin'
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/30'
-                  )}
-                >
-                  <Shield className="h-5 w-5 text-primary" />
-                  <span className="font-medium">Admin</span>
-                </button>
-              </div>
-
               <form onSubmit={handleLogin} className="space-y-5">
                 <div>
                   <Label htmlFor="login-email" className="text-foreground">
@@ -254,14 +217,10 @@ export default function LoginPage() {
               {/* Demo Credentials */}
               <div className="mt-6 p-4 bg-secondary rounded-lg">
                 <p className="text-sm text-muted-foreground mb-2">
-                  Demo credentials for {loginType === 'admin' ? 'Admin' : 'Customer'}:
+                  Demo Customer Credentials:
                 </p>
-                <p className="text-sm text-foreground font-mono">
-                  {loginType === 'admin' ? 'admin@goldencrust.com' : 'user@example.com'}
-                </p>
-                <p className="text-sm text-foreground font-mono">
-                  {loginType === 'admin' ? 'admin123' : 'user123'}
-                </p>
+                <p className="text-sm text-foreground font-mono">user@example.com</p>
+                <p className="text-sm text-foreground font-mono">user123</p>
                 <Button
                   type="button"
                   variant="outline"
@@ -271,6 +230,17 @@ export default function LoginPage() {
                 >
                   Fill Demo Credentials
                 </Button>
+              </div>
+
+              {/* Admin Login Link */}
+              <div className="mt-4 text-center">
+                <Link
+                  href="/admin-login"
+                  className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin? Login here
+                </Link>
               </div>
             </>
           ) : (
