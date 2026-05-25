@@ -1,19 +1,24 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Product, Order, InventoryLog } from '@/lib/types'
+import { Product, Order, InventoryLog, Announcement, OrderFeedback } from '@/lib/types'
 import { initialProducts } from '@/lib/data'
 
 interface StoreContextType {
   products: Product[]
   orders: Order[]
   inventoryLogs: InventoryLog[]
+  announcements: Announcement[]
+  feedbacks: OrderFeedback[]
   updateProduct: (product: Product) => void
   addProduct: (product: Omit<Product, 'id'>) => void
   deleteProduct: (id: string) => void
   updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => void
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Order
   updateOrderStatus: (orderId: string, status: Order['status']) => void
+  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => void
+  deleteAnnouncement: (id: string) => void
+  addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => void
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
@@ -22,12 +27,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [feedbacks, setFeedbacks] = useState<OrderFeedback[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     const savedProducts = localStorage.getItem('bakery-products')
     const savedOrders = localStorage.getItem('bakery-orders')
     const savedLogs = localStorage.getItem('bakery-inventory-logs')
+    const savedAnnouncements = localStorage.getItem('bakery-announcements')
+    const savedFeedbacks = localStorage.getItem('bakery-feedbacks')
     
     if (savedProducts) {
       setProducts(JSON.parse(savedProducts))
@@ -41,6 +50,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     
     if (savedLogs) {
       setInventoryLogs(JSON.parse(savedLogs))
+    }
+
+    if (savedAnnouncements) {
+      setAnnouncements(JSON.parse(savedAnnouncements))
+    }
+
+    if (savedFeedbacks) {
+      setFeedbacks(JSON.parse(savedFeedbacks))
     }
     
     setIsLoaded(true)
@@ -63,6 +80,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('bakery-inventory-logs', JSON.stringify(inventoryLogs))
     }
   }, [inventoryLogs, isLoaded])
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('bakery-announcements', JSON.stringify(announcements))
+    }
+  }, [announcements, isLoaded])
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem('bakery-feedbacks', JSON.stringify(feedbacks))
+    }
+  }, [feedbacks, isLoaded])
 
   const updateProduct = (product: Product) => {
     setProducts(prev => prev.map(p => p.id === product.id ? product : p))
@@ -146,18 +175,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const addAnnouncement = (announcementData: Omit<Announcement, 'id' | 'createdAt'>) => {
+    const announcement: Announcement = {
+      ...announcementData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    }
+    setAnnouncements(prev => [announcement, ...prev])
+  }
+
+  const deleteAnnouncement = (id: string) => {
+    setAnnouncements(prev => prev.filter(a => a.id !== id))
+  }
+
+  const addFeedback = (feedbackData: Omit<OrderFeedback, 'id' | 'createdAt'>) => {
+    const feedback: OrderFeedback = {
+      ...feedbackData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    }
+    setFeedbacks(prev => [feedback, ...prev])
+  }
+
   return (
     <StoreContext.Provider
       value={{
         products,
         orders,
         inventoryLogs,
+        announcements,
+        feedbacks,
         updateProduct,
         addProduct,
         deleteProduct,
         updateStock,
         addOrder,
-        updateOrderStatus
+        updateOrderStatus,
+        addAnnouncement,
+        deleteAnnouncement,
+        addFeedback
       }}
     >
       {children}

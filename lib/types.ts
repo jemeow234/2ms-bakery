@@ -36,9 +36,11 @@ export interface Order {
   customerEmail: string
   customerPhone: string
   address: string
+  deliveryType: 'delivery' | 'pickup'
   status: 'pending' | 'processing' | 'completed' | 'cancelled'
   createdAt: string
   paymentMethod: 'cash' | 'card'
+  distance?: number
 }
 
 export interface InventoryLog {
@@ -50,5 +52,24 @@ export interface InventoryLog {
   previousStock: number
   newStock: number
   note?: string
+  createdAt: string
+}
+
+export interface Announcement {
+  id: string
+  title: string
+  message: string
+  type: 'announcement' | 'advertisement'
+  image?: string
+  createdAt: string
+  createdBy: string
+}
+
+export interface OrderFeedback {
+  id: string
+  orderId: string
+  userId: string
+  rating: number
+  comment: string
   createdAt: string
 }

@@ -11,6 +11,8 @@ import {
   BarChart3,
   LogOut,
   Home,
+  Users,
+  Megaphone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +22,8 @@ const navItems = [
   { href: '/admin/inventory', label: 'Inventory', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
 ]
 
 export function AdminSidebar() {
@@ -38,10 +42,10 @@ export function AdminSidebar() {
       <div className="p-6 border-b border-sidebar-border">
         <Link href="/admin" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-sidebar-primary flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground font-serif text-xl font-bold">G</span>
+            <span className="text-sidebar-primary-foreground font-serif text-xl font-bold">2</span>
           </div>
           <div>
-            <span className="font-serif text-lg font-bold block">Golden Crust</span>
+            <span className="font-serif text-lg font-bold block">2M&apos;s Bakery</span>
             <span className="text-xs text-sidebar-foreground/70">Admin Panel</span>
           </div>
         </Link>

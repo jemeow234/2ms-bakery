@@ -61,17 +61,12 @@ export function Navbar() {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-serif text-xl font-bold">G</span>
-          </div>
-          <span className={cn(
-            'font-serif text-xl font-bold transition-colors duration-300',
-            isScrolled ? 'text-foreground' : 'text-foreground'
-          )}>
-            Golden Crust
-          </span>
-        </Link>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-serif text-lg font-bold">2</span>
+            </div>
+            <span className="font-serif text-lg font-bold text-foreground hidden sm:inline">2M&apos;s Bakery</span>
+          </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
