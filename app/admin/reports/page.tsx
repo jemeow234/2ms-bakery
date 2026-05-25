@@ -21,23 +21,32 @@ type FilterPeriod = 'daily' | 'weekly' | 'monthly'
 export default function ReportsPage() {
   const { orders, products, inventoryLogs } = useStore()
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('daily')
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
 
   const stats = useMemo(() => {
     const now = new Date()
     let startDate = new Date()
+    let endDate = new Date()
 
     if (filterPeriod === 'daily') {
       startDate.setDate(now.getDate())
       startDate.setHours(0, 0, 0, 0)
+      endDate = new Date(now)
     } else if (filterPeriod === 'weekly') {
       startDate.setDate(now.getDate() - now.getDay())
       startDate.setHours(0, 0, 0, 0)
+      endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + 7)
     } else {
-      startDate.setDate(1)
-      startDate.setHours(0, 0, 0, 0)
+      // Monthly - use selected month
+      startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1, 0, 0, 0, 0)
+      endDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0, 23, 59, 59, 999)
     }
 
-    const filteredOrders = orders.filter(o => new Date(o.createdAt) >= startDate)
+    const filteredOrders = orders.filter(o => {
+      const orderDate = new Date(o.createdAt)
+      return orderDate >= startDate && orderDate <= endDate
+    })
 
     const totalRevenue = filteredOrders
       .filter(o => o.status === 'completed')
@@ -113,7 +122,7 @@ export default function ReportsPage() {
         })
     } else {
       // Daily breakdown for this month
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      const daysInMonth = endDate.getDate()
       for (let i = 1; i <= daysInMonth; i++) {
         const day = `Day ${i}`
         salesData[day] = 0
@@ -144,7 +153,7 @@ export default function ReportsPage() {
       salesData,
       inventoryValue,
     }
-  }, [orders, products, filterPeriod])
+  }, [orders, products, filterPeriod, selectedMonth])
 
   const formatCurrency = (value: number) => `$${value.toFixed(2)}`
 
@@ -222,21 +231,39 @@ export default function ReportsPage() {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Filter Period */}
-          <div className="flex gap-2 flex-wrap">
-            <p className="text-sm font-medium text-foreground self-center">Filter By:</p>
-            {(['daily', 'weekly', 'monthly'] as const).map(period => (
-              <button
-                key={period}
-                onClick={() => setFilterPeriod(period)}
-                className={`px-4 py-2 rounded-lg transition-all capitalize font-medium text-sm ${
-                  filterPeriod === period
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-foreground hover:bg-secondary/80'
-                }`}
-              >
-                {period}
-              </button>
-            ))}
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              <p className="text-sm font-medium text-foreground self-center">Filter By:</p>
+              {(['daily', 'weekly', 'monthly'] as const).map(period => (
+                <button
+                  key={period}
+                  onClick={() => setFilterPeriod(period)}
+                  className={`px-4 py-2 rounded-lg transition-all capitalize font-medium text-sm ${
+                    filterPeriod === period
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-foreground hover:bg-secondary/80'
+                  }`}
+                >
+                  {period}
+                </button>
+              ))}
+            </div>
+
+            {/* Month Selector for Monthly View */}
+            {filterPeriod === 'monthly' && (
+              <div className="flex gap-2 items-center flex-wrap">
+                <p className="text-sm font-medium text-foreground">Select Month:</p>
+                <input
+                  type="month"
+                  value={`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`}
+                  onChange={(e) => {
+                    const [year, month] = e.target.value.split('-')
+                    setSelectedMonth(new Date(parseInt(year), parseInt(month) - 1, 1))
+                  }}
+                  className="px-4 py-2 rounded-lg border border-border bg-card text-foreground"
+                />
+              </div>
+            )}
           </div>
 
           {/* Key Metrics */}

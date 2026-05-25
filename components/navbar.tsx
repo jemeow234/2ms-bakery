@@ -6,7 +6,8 @@ import { useCart } from '@/context/cart-context'
 import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Menu, ShoppingBag, User, LogOut } from 'lucide-react'
+import { OrderNotifications } from '@/components/order-notifications'
+import { Menu, ShoppingBag, User, LogOut, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -91,6 +92,10 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          {user && (
+            <OrderNotifications />
+          )}
+
           <Link href="/checkout">
             <Button variant="ghost" size="icon" className="relative">
               <ShoppingBag className="h-5 w-5" />

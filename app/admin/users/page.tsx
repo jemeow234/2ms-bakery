@@ -30,6 +30,7 @@ export default function UserManagementPage() {
     email: '',
     phone: '',
     address: '',
+    password: '',
   })
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function UserManagementPage() {
       email: userData.email,
       phone: userData.phone || '',
       address: userData.address || '',
+      password: userData.password || '',
     })
     setShowAddForm(false)
   }
@@ -81,6 +83,10 @@ export default function UserManagementPage() {
       localStorage.setItem('bakery-registered-users', JSON.stringify(updated))
       toast.success('User updated successfully')
     } else {
+      if (!formData.password) {
+        toast.error('Password is required for new users')
+        return
+      }
       const newUser: RegisteredUser = {
         id: Date.now().toString(),
         ...formData,
@@ -94,13 +100,13 @@ export default function UserManagementPage() {
 
     setEditingUser(null)
     setShowAddForm(false)
-    setFormData({ name: '', email: '', phone: '', address: '' })
+    setFormData({ name: '', email: '', phone: '', address: '', password: '' })
   }
 
   const handleCancel = () => {
     setEditingUser(null)
     setShowAddForm(false)
-    setFormData({ name: '', email: '', phone: '', address: '' })
+    setFormData({ name: '', email: '', phone: '', address: '', password: '' })
   }
 
   return (
@@ -192,6 +198,18 @@ export default function UserManagementPage() {
                       className="mt-2"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="password">Password {editingUser && '(leave blank to keep current)'}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Enter password"
+                    className="mt-2"
+                  />
                 </div>
 
                 <div className="flex gap-3 pt-4">
