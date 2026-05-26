@@ -43,12 +43,7 @@ export default function LoginPage() {
 
     if (result.success) {
       toast.success('Welcome back!')
-      // Redirect will happen automatically based on user role after context updates
       router.push('/')
-        } else {
-          router.push('/')
-        }
-      }
     } else {
       toast.error(result.error || 'Login failed')
     }

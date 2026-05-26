@@ -32,6 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Skip if Supabase is not initialized (build time)
+        if (!supabase) {
+          setIsLoading(false)
+          return
+        }
+
         // Check if user is already logged in via Supabase
         const { data: { user: supabaseUser } } = await supabase.auth.getUser()
         
@@ -72,6 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth()
 
     // Subscribe to auth changes
+    if (!supabase) {
+      return
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const { data: userProfile } = await supabase
@@ -102,6 +112,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      if (!supabase) {
+        return { success: false, error: 'Supabase not initialized' }
+      }
+
       // First check if user exists in users table (for backwards compatibility)
       const { data: existingUser } = await supabase
         .from('users')
@@ -150,6 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
     try {
+      if (!supabase) {
+        return { success: false, error: 'Supabase not initialized' }
+      }
+
       // Check if email already exists
       const { data: existingUser } = await supabase
         .from('users')
