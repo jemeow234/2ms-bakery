@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Product, Order, InventoryLog, Announcement, OrderFeedback } from '@/lib/types'
-import { initialProducts } from '@/lib/data'
+import { useAuth } from './auth-context'
 
 interface StoreContextType {
   products: Product[]
@@ -10,191 +10,231 @@ interface StoreContextType {
   inventoryLogs: InventoryLog[]
   announcements: Announcement[]
   feedbacks: OrderFeedback[]
-  updateProduct: (product: Product) => void
-  addProduct: (product: Omit<Product, 'id'>) => void
-  deleteProduct: (id: string) => void
-  updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => void
-  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Order
-  updateOrderStatus: (orderId: string, status: Order['status']) => void
-  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => void
-  deleteAnnouncement: (id: string) => void
-  addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => void
+  isLoading: boolean
+  updateProduct: (product: Product) => Promise<void>
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>
+  deleteProduct: (id: string) => Promise<void>
+  updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<void>
+  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<Order | null>
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>
+  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => Promise<void>
+  deleteAnnouncement: (id: string) => Promise<void>
+  addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => Promise<void>
+  refreshProducts: () => Promise<void>
+  refreshOrders: () => Promise<void>
+  refreshAnnouncements: () => Promise<void>
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [feedbacks, setFeedbacks] = useState<OrderFeedback[]>([])
-  const [isLoaded, setIsLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
+  // Fetch products
+  const refreshProducts = async () => {
+    try {
+      setIsLoading(true)
+      const res = await fetch('/api/products')
+      if (res.ok) {
+        const data = await res.json()
+        setProducts(data.products || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch products:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Fetch user's orders
+  const refreshOrders = async () => {
+    if (!user) return
+    try {
+      const res = await fetch('/api/orders')
+      if (res.ok) {
+        const data = await res.json()
+        setOrders(data.orders || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch orders:', error)
+    }
+  }
+
+  // Fetch announcements
+  const refreshAnnouncements = async () => {
+    try {
+      const res = await fetch('/api/announcements')
+      if (res.ok) {
+        const data = await res.json()
+        setAnnouncements(data.announcements || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch announcements:', error)
+    }
+  }
+
+  // Initial load
   useEffect(() => {
-    const savedProducts = localStorage.getItem('bakery-products')
-    const savedOrders = localStorage.getItem('bakery-orders')
-    const savedLogs = localStorage.getItem('bakery-inventory-logs')
-    const savedAnnouncements = localStorage.getItem('bakery-announcements')
-    const savedFeedbacks = localStorage.getItem('bakery-feedbacks')
-    
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts))
-    } else {
-      setProducts(initialProducts)
-    }
-    
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders))
-    }
-    
-    if (savedLogs) {
-      setInventoryLogs(JSON.parse(savedLogs))
-    }
-
-    if (savedAnnouncements) {
-      setAnnouncements(JSON.parse(savedAnnouncements))
-    }
-
-    if (savedFeedbacks) {
-      setFeedbacks(JSON.parse(savedFeedbacks))
-    }
-    
-    setIsLoaded(true)
+    refreshProducts()
+    refreshAnnouncements()
   }, [])
 
+  // Refresh orders when user changes
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('bakery-products', JSON.stringify(products))
+    if (user) {
+      refreshOrders()
     }
-  }, [products, isLoaded])
+  }, [user])
 
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('bakery-orders', JSON.stringify(orders))
+  const updateProduct = async (product: Product) => {
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product)
+      })
+      if (res.ok) {
+        setProducts(prev => prev.map(p => p.id === product.id ? product : p))
+      }
+    } catch (error) {
+      console.error('[v0] Failed to update product:', error)
     }
-  }, [orders, isLoaded])
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('bakery-inventory-logs', JSON.stringify(inventoryLogs))
-    }
-  }, [inventoryLogs, isLoaded])
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('bakery-announcements', JSON.stringify(announcements))
-    }
-  }, [announcements, isLoaded])
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('bakery-feedbacks', JSON.stringify(feedbacks))
-    }
-  }, [feedbacks, isLoaded])
-
-  const updateProduct = (product: Product) => {
-    setProducts(prev => prev.map(p => p.id === product.id ? product : p))
   }
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...product,
-      id: Date.now().toString()
+  const addProduct = async (productData: Omit<Product, 'id'>) => {
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setProducts(prev => [data.product, ...prev])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to add product:', error)
     }
-    setProducts(prev => [...prev, newProduct])
   }
 
-  const deleteProduct = (id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id))
+  const deleteProduct = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setProducts(prev => prev.filter(p => p.id !== id))
+      }
+    } catch (error) {
+      console.error('[v0] Failed to delete product:', error)
+    }
   }
 
-  const updateStock = (
-    productId: string, 
-    quantity: number, 
-    type: InventoryLog['type'], 
+  const updateStock = async (
+    productId: string,
+    quantity: number,
+    type: InventoryLog['type'],
     note?: string
   ) => {
-    const product = products.find(p => p.id === productId)
-    if (!product) return
-
-    const previousStock = product.stock
-    let newStock = previousStock
-
-    switch (type) {
-      case 'add':
-        newStock = previousStock + quantity
-        break
-      case 'remove':
-      case 'sale':
-        newStock = Math.max(0, previousStock - quantity)
-        break
-      case 'adjustment':
-        newStock = quantity
-        break
+    try {
+      const res = await fetch('/api/admin/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity, type, note })
+      })
+      if (res.ok) {
+        await refreshProducts()
+      }
+    } catch (error) {
+      console.error('[v0] Failed to update stock:', error)
     }
-
-    setProducts(prev => 
-      prev.map(p => p.id === productId ? { ...p, stock: newStock } : p)
-    )
-
-    const log: InventoryLog = {
-      id: Date.now().toString(),
-      productId,
-      productName: product.name,
-      type,
-      quantity,
-      previousStock,
-      newStock,
-      note,
-      createdAt: new Date().toISOString()
-    }
-
-    setInventoryLogs(prev => [log, ...prev])
   }
 
-  const addOrder = (orderData: Omit<Order, 'id' | 'createdAt'>): Order => {
-    const order: Order = {
-      ...orderData,
-      id: `ORD-${Date.now()}`,
-      createdAt: new Date().toISOString()
+  const addOrder = async (orderData: Omit<Order, 'id' | 'createdAt'>): Promise<Order | null> => {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setOrders(prev => [data.order, ...prev])
+        return data.order
+      }
+      return null
+    } catch (error) {
+      console.error('[v0] Failed to create order:', error)
+      return null
     }
-
-    // Update stock for each item
-    order.items.forEach(item => {
-      updateStock(item.product.id, item.quantity, 'sale', `Order ${order.id}`)
-    })
-
-    setOrders(prev => [order, ...prev])
-    return order
   }
 
-  const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    setOrders(prev => 
-      prev.map(o => o.id === orderId ? { ...o, status } : o)
-    )
-  }
-
-  const addAnnouncement = (announcementData: Omit<Announcement, 'id' | 'createdAt'>) => {
-    const announcement: Announcement = {
-      ...announcementData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
+  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+      if (res.ok) {
+        setOrders(prev =>
+          prev.map(o => o.id === orderId ? { ...o, status } : o)
+        )
+      }
+    } catch (error) {
+      console.error('[v0] Failed to update order status:', error)
     }
-    setAnnouncements(prev => [announcement, ...prev])
   }
 
-  const deleteAnnouncement = (id: string) => {
-    setAnnouncements(prev => prev.filter(a => a.id !== id))
-  }
-
-  const addFeedback = (feedbackData: Omit<OrderFeedback, 'id' | 'createdAt'>) => {
-    const feedback: OrderFeedback = {
-      ...feedbackData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
+  const addAnnouncement = async (announcementData: Omit<Announcement, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch('/api/admin/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(announcementData)
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAnnouncements(prev => [data.announcement, ...prev])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to create announcement:', error)
     }
-    setFeedbacks(prev => [feedback, ...prev])
+  }
+
+  const deleteAnnouncement = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/announcements/${id}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setAnnouncements(prev => prev.filter(a => a.id !== id))
+      }
+    } catch (error) {
+      console.error('[v0] Failed to delete announcement:', error)
+    }
+  }
+
+  const addFeedback = async (feedbackData: Omit<OrderFeedback, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedbackData)
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setFeedbacks(prev => [data.feedback, ...prev])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to add feedback:', error)
+    }
   }
 
   return (
@@ -205,6 +245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         inventoryLogs,
         announcements,
         feedbacks,
+        isLoading,
         updateProduct,
         addProduct,
         deleteProduct,
@@ -213,7 +254,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateOrderStatus,
         addAnnouncement,
         deleteAnnouncement,
-        addFeedback
+        addFeedback,
+        refreshProducts,
+        refreshOrders,
+        refreshAnnouncements
       }}
     >
       {children}

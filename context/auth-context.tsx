@@ -1,8 +1,9 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { User, RegisteredUser } from '@/lib/types'
-import { users as defaultUsers } from '@/lib/data'
+import { User } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
+import { migrateLocalStorageToSupabase } from '@/lib/supabase/migrate'
 
 interface RegisterData {
   name: string
@@ -16,99 +17,235 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
+  logout: () => Promise<void>
   isLoading: boolean
-  registeredUsers: RegisteredUser[]
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    // Load saved user session
-    const savedUser = localStorage.getItem('bakery-user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
+    const initAuth = async () => {
+      try {
+        // Check if user is already logged in via Supabase
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+        
+        if (supabaseUser) {
+          // Fetch user profile from database
+          const { data: userProfile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', supabaseUser.id)
+            .single()
+          
+          if (userProfile) {
+            setUser({
+              id: userProfile.id,
+              email: userProfile.email,
+              name: userProfile.name,
+              phone: userProfile.phone,
+              address: userProfile.address,
+              role: userProfile.role
+            })
+
+            // Try migration if first time
+            const migrationDone = localStorage.getItem('bakery-migration-done')
+            if (!migrationDone) {
+              console.log('[v0] Running first-time migration...')
+              await migrateLocalStorageToSupabase()
+              localStorage.setItem('bakery-migration-done', 'true')
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[v0] Auth init error:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    // Load registered users from localStorage or use defaults
-    const savedRegisteredUsers = localStorage.getItem('bakery-registered-users')
-    if (savedRegisteredUsers) {
-      setRegisteredUsers(JSON.parse(savedRegisteredUsers))
-    } else {
-      // Initialize with default users
-      const initialUsers: RegisteredUser[] = defaultUsers.map(u => ({
-        ...u,
-        phone: '',
-        address: ''
-      }))
-      setRegisteredUsers(initialUsers)
-      localStorage.setItem('bakery-registered-users', JSON.stringify(initialUsers))
-    }
+    initAuth()
 
-    setIsLoading(false)
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (userProfile) {
+          setUser({
+            id: userProfile.id,
+            email: userProfile.email,
+            name: userProfile.name,
+            phone: userProfile.phone,
+            address: userProfile.address,
+            role: userProfile.role
+          })
+        }
+      } else {
+        setUser(null)
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
   }, [])
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    // Check registered users in localStorage
-    const savedUsers = localStorage.getItem('bakery-registered-users')
-    const allUsers: RegisteredUser[] = savedUsers ? JSON.parse(savedUsers) : []
-    
-    const foundUser = allUsers.find(u => u.email === email && u.password === password)
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser
-      setUser(userWithoutPassword)
-      localStorage.setItem('bakery-user', JSON.stringify(userWithoutPassword))
-      return { success: true }
+    try {
+      // First check if user exists in users table (for backwards compatibility)
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', password)
+        .single()
+
+      if (existingUser) {
+        // Sign them up with auth if they don't have an auth account
+        const { data: authUser, error: authError } = await supabase.auth.signUp({
+          email,
+          password: Math.random().toString(36).slice(2) // Random password
+        })
+
+        if (authError && !authError.message.includes('already registered')) {
+          return { success: false, error: authError.message }
+        }
+
+        // Update user in database to have this auth id
+        if (authUser?.user) {
+          await supabase
+            .from('users')
+            .update({ id: authUser.user.id })
+            .eq('email', email)
+        }
+
+        setUser({
+          id: existingUser.id,
+          email: existingUser.email,
+          name: existingUser.name,
+          phone: existingUser.phone,
+          address: existingUser.address,
+          role: existingUser.role
+        })
+
+        return { success: true }
+      }
+
+      return { success: false, error: 'Invalid email or password' }
+    } catch (error) {
+      console.error('[v0] Login error:', error)
+      return { success: false, error: 'Login failed' }
     }
-    
-    return { success: false, error: 'Invalid email or password' }
   }
 
   const register = async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
-    // Check if email already exists
-    const savedUsers = localStorage.getItem('bakery-registered-users')
-    const allUsers: RegisteredUser[] = savedUsers ? JSON.parse(savedUsers) : []
-    
-    if (allUsers.some(u => u.email === data.email)) {
-      return { success: false, error: 'An account with this email already exists' }
+    try {
+      // Check if email already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', data.email)
+        .single()
+
+      if (existingUser) {
+        return { success: false, error: 'An account with this email already exists' }
+      }
+
+      // Create auth account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password
+      })
+
+      if (authError) {
+        return { success: false, error: authError.message }
+      }
+
+      if (!authData.user) {
+        return { success: false, error: 'Failed to create account' }
+      }
+
+      // Create user profile in database
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: data.email,
+          name: data.name,
+          phone: data.phone || null,
+          address: data.address || null,
+          password: data.password, // Still storing for backwards compatibility
+          role: 'user'
+        })
+
+      if (dbError) {
+        return { success: false, error: dbError.message }
+      }
+
+      // Set the user
+      setUser({
+        id: authData.user.id,
+        email: data.email,
+        name: data.name,
+        phone: data.phone,
+        address: data.address,
+        role: 'user'
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error('[v0] Register error:', error)
+      return { success: false, error: 'Registration failed' }
     }
-
-    // Create new user
-    const newUser: RegisteredUser = {
-      id: `user-${Date.now()}`,
-      email: data.email,
-      name: data.name,
-      phone: data.phone,
-      address: data.address,
-      password: data.password,
-      role: 'user'
-    }
-
-    const updatedUsers = [...allUsers, newUser]
-    setRegisteredUsers(updatedUsers)
-    localStorage.setItem('bakery-registered-users', JSON.stringify(updatedUsers))
-
-    // Auto-login after registration
-    const { password: _, ...userWithoutPassword } = newUser
-    setUser(userWithoutPassword)
-    localStorage.setItem('bakery-user', JSON.stringify(userWithoutPassword))
-
-    return { success: true }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('bakery-user')
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+    } catch (error) {
+      console.error('[v0] Logout error:', error)
+    }
+  }
+
+  const refreshUser = async () => {
+    try {
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+      if (supabaseUser) {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single()
+        
+        if (userProfile) {
+          setUser({
+            id: userProfile.id,
+            email: userProfile.email,
+            name: userProfile.name,
+            phone: userProfile.phone,
+            address: userProfile.address,
+            role: userProfile.role
+          })
+        }
+      }
+    } catch (error) {
+      console.error('[v0] Refresh user error:', error)
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, registeredUsers }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
