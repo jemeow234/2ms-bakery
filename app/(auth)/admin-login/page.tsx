@@ -26,17 +26,9 @@ export default function AdminLoginPage() {
     const result = await login(email, password)
 
     if (result.success) {
-      const savedUser = localStorage.getItem('bakery-user')
-      if (savedUser) {
-        const user = JSON.parse(savedUser)
-        if (user.role === 'admin') {
-          toast.success('Welcome back, Admin!')
-          router.push('/admin')
-        } else {
-          toast.error('Access denied. Admin credentials required.')
-          localStorage.removeItem('bakery-user')
-        }
-      }
+      // The auth context will have the user info. Just redirect to admin
+      toast.success('Welcome back, Admin!')
+      router.push('/admin')
     } else {
       toast.error(result.error || 'Login failed')
     }
@@ -45,7 +37,7 @@ export default function AdminLoginPage() {
   }
 
   const fillDemoCredentials = () => {
-    setEmail('admin@goldencrust.com')
+    setEmail('admin@2ms-bakery.com')
     setPassword('admin123')
   }
 

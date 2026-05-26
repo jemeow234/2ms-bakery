@@ -43,11 +43,8 @@ export default function LoginPage() {
 
     if (result.success) {
       toast.success('Welcome back!')
-      const savedUser = localStorage.getItem('bakery-user')
-      if (savedUser) {
-        const user = JSON.parse(savedUser)
-        if (user.role === 'admin') {
-          router.push('/admin')
+      // Redirect will happen automatically based on user role after context updates
+      router.push('/')
         } else {
           router.push('/')
         }
