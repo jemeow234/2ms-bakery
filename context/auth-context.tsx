@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('users')
         .insert({
           email: data.email,
-          name: data.fullName,
+          name: data.name,
           phone: data.phone,
           address: data.address,
           password: data.password,
