@@ -116,46 +116,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Supabase not initialized' }
       }
 
-      // First check if user exists in users table (for backwards compatibility)
-      const { data: existingUser } = await supabase
+      // Check if user exists in users table with matching email and password
+      const { data: existingUsers, error: queryError } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .eq('password', password)
-        .single()
 
-      if (existingUser) {
-        // Sign them up with auth if they don't have an auth account
-        const { data: authUser, error: authError } = await supabase.auth.signUp({
-          email,
-          password: Math.random().toString(36).slice(2) // Random password
-        })
-
-        if (authError && !authError.message.includes('already registered')) {
-          return { success: false, error: authError.message }
-        }
-
-        // Update user in database to have this auth id
-        if (authUser?.user) {
-          await supabase
-            .from('users')
-            .update({ id: authUser.user.id })
-            .eq('email', email)
-        }
-
-        setUser({
-          id: existingUser.id,
-          email: existingUser.email,
-          name: existingUser.name,
-          phone: existingUser.phone,
-          address: existingUser.address,
-          role: existingUser.role
-        })
-
-        return { success: true }
+      if (queryError) {
+        console.error('[v0] Query error:', queryError)
+        return { success: false, error: 'Invalid email or password' }
       }
 
-      return { success: false, error: 'Invalid email or password' }
+      if (!existingUsers || existingUsers.length === 0) {
+        return { success: false, error: 'Invalid email or password' }
+      }
+
+      const existingUser = existingUsers[0]
+
+      // Set the user in context
+      setUser({
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        phone: existingUser.phone,
+        address: existingUser.address,
+        role: existingUser.role
+      })
+
+      return { success: true }
     } catch (error) {
       console.error('[v0] Login error:', error)
       return { success: false, error: 'Login failed' }
@@ -169,55 +158,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check if email already exists
-      const { data: existingUser } = await supabase
+      const { data: existingUsers, error: checkError } = await supabase
         .from('users')
         .select('id')
         .eq('email', data.email)
-        .single()
 
-      if (existingUser) {
+      if (checkError) {
+        return { success: false, error: 'Failed to check existing users' }
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
         return { success: false, error: 'An account with this email already exists' }
       }
 
-      // Create auth account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password
-      })
-
-      if (authError) {
-        return { success: false, error: authError.message }
-      }
-
-      if (!authData.user) {
-        return { success: false, error: 'Failed to create account' }
-      }
-
-      // Create user profile in database
-      const { error: dbError } = await supabase
+      // Create user in database
+      const { data: newUser, error: insertError } = await supabase
         .from('users')
         .insert({
-          id: authData.user.id,
           email: data.email,
-          name: data.name,
-          phone: data.phone || null,
-          address: data.address || null,
-          password: data.password, // Still storing for backwards compatibility
+          name: data.fullName,
+          phone: data.phone,
+          address: data.address,
+          password: data.password,
           role: 'user'
         })
+        .select()
+        .single()
 
-      if (dbError) {
-        return { success: false, error: dbError.message }
+      if (insertError) {
+        console.error('[v0] Insert error:', insertError)
+        return { success: false, error: insertError.message }
       }
 
-      // Set the user
+      if (!newUser) {
+        return { success: false, error: 'Failed to create user' }
+      }
+
+      // Set the user in context
       setUser({
-        id: authData.user.id,
-        email: data.email,
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-        role: 'user'
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        phone: newUser.phone,
+        address: newUser.address,
+        role: newUser.role
       })
 
       return { success: true }
