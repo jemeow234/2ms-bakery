@@ -120,4 +120,3 @@ After user registration, they can:
 - View order history
 - Submit feedback and ratings
 - Receive order notifications
-
