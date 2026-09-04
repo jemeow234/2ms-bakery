@@ -12,10 +12,10 @@ interface StoreContextType {
   announcements: Announcement[]
   feedbacks: OrderFeedback[]
   isLoading: boolean
-  updateProduct: (product: Product) => Promise<void>
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>
+  updateProduct: (product: Product) => Promise<boolean>
+  addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>
   deleteProduct: (id: string) => Promise<void>
-  updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<void>
+  updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<boolean>
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<Order | null>
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => Promise<void>
@@ -130,22 +130,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [user])
 
-  const updateProduct = async (product: Product) => {
+  const updateProduct = async (product: Product): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/products/${product.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product)
       })
       if (res.ok) {
         setProducts(prev => prev.map(p => p.id === product.id ? product : p))
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to update product:', error)
+      return false
     }
   }
 
-  const addProduct = async (productData: Omit<Product, 'id'>) => {
+  const addProduct = async (productData: Omit<Product, 'id'>): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/products', {
         method: 'POST',
@@ -155,9 +158,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setProducts(prev => [data.product, ...prev])
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to add product:', error)
+      return false
     }
   }
 
@@ -179,7 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     quantity: number,
     type: InventoryLog['type'],
     note?: string
-  ) => {
+  ): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/inventory', {
         method: 'POST',
@@ -188,9 +194,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })
       if (res.ok) {
         await refreshProducts()
+        await refreshInventoryLogs()
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to update stock:', error)
+      return false
     }
   }
 

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    return NextResponse.json({ product: data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

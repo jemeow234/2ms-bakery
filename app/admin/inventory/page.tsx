@@ -87,13 +87,13 @@ export default function InventoryPage() {
       }
     })
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!newProduct.name || !newProduct.price || !newProduct.stock) {
       toast.error('Please fill all required fields')
       return
     }
 
-    addProduct({
+    const success = await addProduct({
       name: newProduct.name,
       description: newProduct.description,
       price: parseFloat(newProduct.price),
@@ -102,6 +102,11 @@ export default function InventoryPage() {
       featured: newProduct.featured,
       image: '/images/placeholder.jpg',
     })
+
+    if (!success) {
+      toast.error('Failed to add product. Please try again.')
+      return
+    }
 
     setNewProduct({
       name: '',
@@ -115,25 +120,34 @@ export default function InventoryPage() {
     toast.success('Product added successfully')
   }
 
-  const handleEditProduct = () => {
+  const handleEditProduct = async () => {
     if (!selectedProduct) return
-    updateProduct(selectedProduct)
+    const success = await updateProduct(selectedProduct)
+    if (!success) {
+      toast.error('Failed to update product. Please try again.')
+      return
+    }
     setIsEditDialogOpen(false)
     toast.success('Product updated successfully')
   }
 
-  const handleStockUpdate = () => {
+  const handleStockUpdate = async () => {
     if (!selectedProduct || !stockUpdate.quantity) {
       toast.error('Please enter a quantity')
       return
     }
 
-    updateStock(
+    const success = await updateStock(
       selectedProduct.id,
       parseInt(stockUpdate.quantity),
       stockUpdate.type,
       stockUpdate.note
     )
+
+    if (!success) {
+      toast.error('Failed to update stock. Please try again.')
+      return
+    }
 
     setStockUpdate({ type: 'add', quantity: '', note: '' })
     setIsStockDialogOpen(false)
@@ -330,9 +344,7 @@ export default function InventoryPage() {
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary relative flex-shrink-0">
                         {imageErrors[product.id] ? (
                           <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-xl">
-                              {product.category === 'bread' ? '🍞' : product.category === 'pastry' ? '🥐' : '🍰'}
-                            </span>
+                            <Package className="h-5 w-5 text-muted-foreground" />
                           </div>
                         ) : (
                           <Image
