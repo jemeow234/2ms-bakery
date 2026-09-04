@@ -16,6 +16,7 @@ import {
   Banknote,
   CheckCircle2,
   User,
+  ShoppingBag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -97,10 +98,7 @@ export default function POSPage() {
 
     setIsProcessing(true)
 
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    addOrder({
+    const order = await addOrder({
       items: cart,
       total: totalPrice,
       customerName: customerName || 'Walk-in Customer',
@@ -112,14 +110,19 @@ export default function POSPage() {
       paymentMethod,
     })
 
+    setIsProcessing(false)
+
+    if (!order) {
+      toast.error('Failed to complete sale. Please try again.')
+      return
+    }
+
     setShowSuccess(true)
+    toast.success('Order completed!')
     setTimeout(() => {
       setShowSuccess(false)
       clearCart()
     }, 2000)
-
-    setIsProcessing(false)
-    toast.success('Order completed!')
   }
 
   if (showSuccess) {
@@ -190,9 +193,7 @@ export default function POSPage() {
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-3 relative">
                   {imageErrors[product.id] ? (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-4xl">
-                        {product.category === 'bread' ? '🍞' : product.category === 'pastry' ? '🥐' : '🍰'}
-                      </span>
+                      <ShoppingBag className="h-8 w-8 text-muted-foreground" />
                     </div>
                   ) : (
                     <Image

@@ -12,7 +12,7 @@ import {
 import Link from 'next/link'
 
 export default function AdminDashboard() {
-  const { products, orders, inventoryLogs } = useStore()
+  const { products, adminOrders: orders, inventoryLogs } = useStore()
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
   const pendingOrders = orders.filter(o => o.status === 'pending').length

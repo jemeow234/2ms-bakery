@@ -28,7 +28,19 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    const logs = (data || []).map((log: any) => ({
+      id: log.id,
+      productId: log.product_id,
+      productName: log.product_name,
+      type: log.type,
+      quantity: log.quantity,
+      previousStock: log.previous_stock,
+      newStock: log.new_stock,
+      note: log.note ?? undefined,
+      createdAt: log.created_at,
+    }))
+
+    return NextResponse.json({ logs })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

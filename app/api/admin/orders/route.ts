@@ -37,7 +37,25 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    const orders = (data || []).map((order: any) => ({
+      id: order.id,
+      items: (order.order_items || []).map((item: any) => ({
+        product: { id: item.product_id, name: item.product_name, price: item.price },
+        quantity: item.quantity,
+      })),
+      total: order.total,
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone,
+      address: order.address,
+      deliveryType: order.delivery_type,
+      status: order.status,
+      createdAt: order.created_at,
+      paymentMethod: order.payment_method,
+      distance: order.distance ?? undefined,
+    }))
+
+    return NextResponse.json({ orders })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

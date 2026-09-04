@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     const body = await req.json()
-    const { items, total, customerName, customerEmail, customerPhone, address, deliveryType, distance, paymentMethod } = body
+    const { items, total, customerName, customerEmail, customerPhone, address, deliveryType, distance, paymentMethod, status } = body
 
     // Checkout doesn't require an account — user_id is null for guest orders.
     // Create order
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         distance,
         total,
         payment_method: paymentMethod,
-        status: 'pending'
+        status: status || 'pending'
       })
       .select()
       .single()

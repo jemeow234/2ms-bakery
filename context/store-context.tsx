@@ -7,6 +7,7 @@ import { useAuth } from './auth-context'
 interface StoreContextType {
   products: Product[]
   orders: Order[]
+  adminOrders: Order[]
   inventoryLogs: InventoryLog[]
   announcements: Announcement[]
   feedbacks: OrderFeedback[]
@@ -22,6 +23,8 @@ interface StoreContextType {
   addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => Promise<void>
   refreshProducts: () => Promise<void>
   refreshOrders: () => Promise<void>
+  refreshAdminOrders: () => Promise<void>
+  refreshInventoryLogs: () => Promise<void>
   refreshAnnouncements: () => Promise<void>
 }
 
@@ -31,6 +34,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
+  const [adminOrders, setAdminOrders] = useState<Order[]>([])
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [feedbacks, setFeedbacks] = useState<OrderFeedback[]>([])
@@ -66,6 +70,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Fetch all orders (admin only)
+  const refreshAdminOrders = async () => {
+    if (!user || user.role !== 'admin') return
+    try {
+      const res = await fetch('/api/admin/orders')
+      if (res.ok) {
+        const data = await res.json()
+        setAdminOrders(data.orders || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch admin orders:', error)
+    }
+  }
+
+  // Fetch inventory activity log (admin only)
+  const refreshInventoryLogs = async () => {
+    if (!user || user.role !== 'admin') return
+    try {
+      const res = await fetch('/api/admin/inventory')
+      if (res.ok) {
+        const data = await res.json()
+        setInventoryLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch inventory logs:', error)
+    }
+  }
+
   // Fetch announcements
   const refreshAnnouncements = async () => {
     try {
@@ -91,6 +123,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       refreshOrders()
+      if (user.role === 'admin') {
+        refreshAdminOrders()
+        refreshInventoryLogs()
+      }
     }
   }, [user])
 
@@ -168,6 +204,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setOrders(prev => [data.order, ...prev])
+        if (user?.role === 'admin') {
+          setAdminOrders(prev => [data.order, ...prev])
+        }
         return data.order
       }
       return null
@@ -185,7 +224,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ status })
       })
       if (res.ok) {
-        setOrders(prev =>
+        setAdminOrders(prev =>
           prev.map(o => o.id === orderId ? { ...o, status } : o)
         )
       }
@@ -244,6 +283,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       value={{
         products,
         orders,
+        adminOrders,
         inventoryLogs,
         announcements,
         feedbacks,
@@ -259,6 +299,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addFeedback,
         refreshProducts,
         refreshOrders,
+        refreshAdminOrders,
+        refreshInventoryLogs,
         refreshAnnouncements
       }}
     >

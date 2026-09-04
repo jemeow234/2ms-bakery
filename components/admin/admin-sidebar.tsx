@@ -45,7 +45,7 @@ export function AdminSidebar() {
             <span className="text-sidebar-primary-foreground font-serif text-xl font-bold">2</span>
           </div>
           <div>
-            <span className="font-serif text-lg font-bold block">2M&apos;s Bakery</span>
+            <span className="text-lg font-bold block">2M&apos;s Bakery</span>
             <span className="text-xs text-sidebar-foreground/70">Admin Panel</span>
           </div>
         </Link>
