@@ -123,6 +123,14 @@ export default function UserManagementPage() {
         <p className="text-muted-foreground mt-1">View and manage registered users</p>
       </div>
 
+      {/* Stats */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        <div className="bg-card rounded-xl border border-border p-4">
+          <p className="text-sm text-muted-foreground">Total Users</p>
+          <p className="text-3xl font-bold text-primary mt-2">{users.length}</p>
+        </div>
+      </div>
+
       {/* Edit Form */}
       {editingUser && (
         <div className="bg-card rounded-xl border border-border p-6">
@@ -294,14 +302,6 @@ export default function UserManagementPage() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid sm:grid-cols-3 gap-4">
-        <div className="bg-card rounded-xl border border-border p-4">
-          <p className="text-sm text-muted-foreground">Total Users</p>
-          <p className="text-3xl font-bold text-primary mt-2">{users.length}</p>
         </div>
       </div>
     </div>
