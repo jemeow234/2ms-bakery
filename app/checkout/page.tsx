@@ -135,7 +135,7 @@ export default function CheckoutPage() {
     await new Promise(resolve => setTimeout(resolve, 1500))
 
     try {
-      const order = addOrder({
+      const order = await addOrder({
         items: items.map(item => ({
           product: item.product,
           quantity: item.quantity
@@ -150,6 +150,12 @@ export default function CheckoutPage() {
         status: 'pending',
         paymentMethod: formData.paymentMethod,
       })
+
+      if (!order) {
+        toast.error('Failed to place order. Please try again.')
+        setIsProcessing(false)
+        return
+      }
 
       setOrderNumber(order.id)
       setLastOrder(order)

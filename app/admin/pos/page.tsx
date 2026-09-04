@@ -107,6 +107,7 @@ export default function POSPage() {
       customerEmail: '',
       customerPhone: '',
       address: 'In-Store Purchase',
+      deliveryType: 'pickup',
       status: 'completed',
       paymentMethod,
     })

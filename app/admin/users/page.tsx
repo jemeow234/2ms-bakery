@@ -9,15 +9,7 @@ import { Label } from '@/components/ui/label'
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
 import { Edit2, Trash2, Plus, X, Save } from 'lucide-react'
 import { toast } from 'sonner'
-
-interface RegisteredUser {
-  id: string
-  email: string
-  name: string
-  phone?: string
-  address?: string
-  role: 'user' | 'admin'
-}
+import type { RegisteredUser } from '@/lib/types'
 
 export default function UserManagementPage() {
   const { user } = useAuth()

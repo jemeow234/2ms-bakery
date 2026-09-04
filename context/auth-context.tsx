@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import type { Session } from '@supabase/supabase-js'
 import { migrateLocalStorageToSupabase } from '@/lib/supabase/migrate'
 
 interface RegisterData {
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
       if (session?.user) {
         const { data: userProfile } = await supabase
           .from('users')
