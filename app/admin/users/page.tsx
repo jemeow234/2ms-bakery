@@ -31,9 +31,11 @@ export default function UserManagementPage() {
       return
     }
 
-    // Load registered users
+    // Load registered users. localStorage isn't available during SSR, so this
+    // must happen in an effect rather than during render.
     const registeredUsers = localStorage.getItem('bakery-registered-users')
     if (registeredUsers) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsers(JSON.parse(registeredUsers))
     }
   }, [user, router])

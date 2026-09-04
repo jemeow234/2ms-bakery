@@ -79,8 +79,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Initial load
+  // Initial load — fetches data from the API, standard effect-based data fetching
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshProducts()
     refreshAnnouncements()
   }, [])
@@ -88,6 +89,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Refresh orders when user changes
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       refreshOrders()
     }
   }, [user])

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -71,18 +71,18 @@ export default function CheckoutPage() {
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null)
   const [distanceError, setDistanceError] = useState<string | null>(null)
 
-  // Pre-fill form with user data if logged in
-  useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || '',
-      }))
-    }
-  }, [user])
+  // Pre-fill form with user data once, when the user logs in
+  const [prefilledForUserId, setPrefilledForUserId] = useState<string | null>(null)
+  if (user && prefilledForUserId !== user.id) {
+    setPrefilledForUserId(user.id)
+    setFormData(prev => ({
+      ...prev,
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      address: user.address || '',
+    }))
+  }
 
   const handleImageError = (productId: string) => {
     setImageErrors(prev => ({ ...prev, [productId]: true }))

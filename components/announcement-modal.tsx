@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Announcement } from '@/lib/types'
 import { useStore } from '@/context/store-context'
 
 interface AnnouncementModalProps {
@@ -12,19 +10,9 @@ interface AnnouncementModalProps {
 }
 
 export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null)
-  const [hasShown, setHasShown] = useState(false)
   const { announcements } = useStore()
+  const announcement = announcements[0] ?? null
 
-  useEffect(() => {
-    // Get the latest announcement
-    if (announcements.length > 0 && isOpen && !hasShown) {
-      setAnnouncement(announcements[0])
-      setHasShown(true)
-    }
-  }, [announcements, isOpen, hasShown])
-
-  
   if (!isOpen || !announcement) return null
 
   return (
