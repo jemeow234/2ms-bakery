@@ -76,8 +76,13 @@ export default function LoginPage() {
     })
 
     if (result.success) {
-      toast.success('Account created successfully! Welcome to Golden Crust!')
-      router.push('/')
+      if (result.needsEmailConfirmation) {
+        toast.success('Account created! Check your email to confirm it before signing in.')
+        setAuthMode('login')
+      } else {
+        toast.success('Account created successfully! Welcome to Golden Crust!')
+        router.push('/')
+      }
     } else {
       toast.error(result.error || 'Registration failed')
     }

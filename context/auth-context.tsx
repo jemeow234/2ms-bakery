@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
-import type { Session } from '@supabase/supabase-js'
+import type { Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js'
 import { migrateLocalStorageToSupabase } from '@/lib/supabase/migrate'
 
 interface RegisterData {
@@ -14,10 +14,16 @@ interface RegisterData {
   password: string
 }
 
+interface AuthResult {
+  success: boolean
+  error?: string
+  needsEmailConfirmation?: boolean
+}
+
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<AuthResult>
+  register: (data: RegisterData) => Promise<AuthResult>
   logout: () => Promise<void>
   isLoading: boolean
   refreshUser: () => Promise<void>
@@ -25,52 +31,74 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Fetches the user's profile row, creating it from auth metadata if this is
+// their first session after confirming their email (the profile can't be
+// created at signup time when email confirmation is required, since there's
+// no session yet to satisfy the insert's RLS policy).
+async function loadUserProfile(
+  supabase: SupabaseClient,
+  authUser: SupabaseUser,
+  fallback?: { name?: string; phone?: string; address?: string }
+): Promise<User | null> {
+  const { data: existing } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', authUser.id)
+    .single()
+
+  if (existing) return existing as User
+
+  const metadata = authUser.user_metadata || {}
+  const { data: created, error } = await supabase
+    .from('users')
+    .insert({
+      id: authUser.id,
+      email: authUser.email,
+      name: fallback?.name ?? metadata.name ?? '',
+      phone: fallback?.phone ?? metadata.phone ?? null,
+      address: fallback?.address ?? metadata.address ?? null,
+      role: 'user',
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to create user profile:', error)
+    return null
+  }
+
+  return created as User
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
+  const [user, setUser] = useState<User | null>(null)
+  // No Supabase client (e.g. missing env vars) means there's nothing to load.
+  const [isLoading, setIsLoading] = useState(() => !!supabase)
 
   useEffect(() => {
+    if (!supabase) {
+      return
+    }
+
     const initAuth = async () => {
       try {
-        // Skip if Supabase is not initialized (build time)
-        if (!supabase) {
-          setIsLoading(false)
-          return
-        }
+        const { data: { session } } = await supabase.auth.getSession()
 
-        // Check if user is already logged in via Supabase
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-        
-        if (supabaseUser) {
-          // Fetch user profile from database
-          const { data: userProfile, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', supabaseUser.id)
-            .single()
-          
-          if (userProfile) {
-            setUser({
-              id: userProfile.id,
-              email: userProfile.email,
-              name: userProfile.name,
-              phone: userProfile.phone,
-              address: userProfile.address,
-              role: userProfile.role
-            })
+        if (session?.user) {
+          const profile = await loadUserProfile(supabase, session.user)
+          if (profile) {
+            setUser(profile)
 
-            // Try migration if first time
             const migrationDone = localStorage.getItem('bakery-migration-done')
             if (!migrationDone) {
-              console.log('[v0] Running first-time migration...')
               await migrateLocalStorageToSupabase()
               localStorage.setItem('bakery-migration-done', 'true')
             }
           }
         }
       } catch (error) {
-        console.error('[v0] Auth init error:', error)
+        console.error('Auth init error:', error)
       } finally {
         setIsLoading(false)
       }
@@ -78,29 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth()
 
-    // Subscribe to auth changes
-    if (!supabase) {
-      return
-    }
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
       if (session?.user) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
-        if (userProfile) {
-          setUser({
-            id: userProfile.id,
-            email: userProfile.email,
-            name: userProfile.name,
-            phone: userProfile.phone,
-            address: userProfile.address,
-            role: userProfile.role
-          })
-        }
+        const profile = await loadUserProfile(supabase, session.user)
+        setUser(profile)
       } else {
         setUser(null)
       }
@@ -111,79 +120,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<AuthResult> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not initialized' }
+    }
+
     try {
-      if (!supabase) {
-        return { success: false, error: 'Supabase not initialized' }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+      if (error) {
+        return { success: false, error: error.message }
       }
 
-      // First check if user exists in users table (for backwards compatibility)
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('password', password)
-        .single()
-
-      if (existingUser) {
-        // Sign them up with auth if they don't have an auth account
-        const { data: authUser, error: authError } = await supabase.auth.signUp({
-          email,
-          password: Math.random().toString(36).slice(2) // Random password
-        })
-
-        if (authError && !authError.message.includes('already registered')) {
-          return { success: false, error: authError.message }
-        }
-
-        // Update user in database to have this auth id
-        if (authUser?.user) {
-          await supabase
-            .from('users')
-            .update({ id: authUser.user.id })
-            .eq('email', email)
-        }
-
-        setUser({
-          id: existingUser.id,
-          email: existingUser.email,
-          name: existingUser.name,
-          phone: existingUser.phone,
-          address: existingUser.address,
-          role: existingUser.role
-        })
-
-        return { success: true }
+      if (!data.user) {
+        return { success: false, error: 'Login failed' }
       }
 
-      return { success: false, error: 'Invalid email or password' }
+      const profile = await loadUserProfile(supabase, data.user)
+      if (!profile) {
+        return { success: false, error: 'Failed to load your profile. Please try again.' }
+      }
+
+      setUser(profile)
+      return { success: true }
     } catch (error) {
-      console.error('[v0] Login error:', error)
+      console.error('Login error:', error)
       return { success: false, error: 'Login failed' }
     }
   }
 
-  const register = async (data: RegisterData): Promise<{ success: boolean; error?: string }> => {
+  const register = async (data: RegisterData): Promise<AuthResult> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not initialized' }
+    }
+
     try {
-      if (!supabase) {
-        return { success: false, error: 'Supabase not initialized' }
-      }
-
-      // Check if email already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', data.email)
-        .single()
-
-      if (existingUser) {
-        return { success: false, error: 'An account with this email already exists' }
-      }
-
-      // Create auth account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
-        password: data.password
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            phone: data.phone,
+            address: data.address,
+          },
+        },
       })
 
       if (authError) {
@@ -194,72 +175,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Failed to create account' }
       }
 
-      // Create user profile in database
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: data.email,
-          name: data.name,
-          phone: data.phone || null,
-          address: data.address || null,
-          password: data.password, // Still storing for backwards compatibility
-          role: 'user'
-        })
-
-      if (dbError) {
-        return { success: false, error: dbError.message }
+      // Supabase returns a user with no identities (instead of an error) when
+      // the email is already registered, to avoid leaking which emails exist.
+      if (authData.user.identities?.length === 0) {
+        return { success: false, error: 'An account with this email already exists' }
       }
 
-      // Set the user
-      setUser({
-        id: authData.user.id,
-        email: data.email,
+      // No session means email confirmation is required before the account
+      // is usable. The profile row gets created on their first real login.
+      if (!authData.session) {
+        return { success: true, needsEmailConfirmation: true }
+      }
+
+      const profile = await loadUserProfile(supabase, authData.user, {
         name: data.name,
         phone: data.phone,
         address: data.address,
-        role: 'user'
       })
 
+      if (!profile) {
+        return { success: false, error: 'Account created, but failed to set up your profile' }
+      }
+
+      setUser(profile)
       return { success: true }
     } catch (error) {
-      console.error('[v0] Register error:', error)
+      console.error('Register error:', error)
       return { success: false, error: 'Registration failed' }
     }
   }
 
   const logout = async () => {
     try {
+      if (!supabase) return
       await supabase.auth.signOut()
       setUser(null)
     } catch (error) {
-      console.error('[v0] Logout error:', error)
+      console.error('Logout error:', error)
     }
   }
 
   const refreshUser = async () => {
     try {
+      if (!supabase) return
       const { data: { user: supabaseUser } } = await supabase.auth.getUser()
       if (supabaseUser) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', supabaseUser.id)
-          .single()
-        
-        if (userProfile) {
-          setUser({
-            id: userProfile.id,
-            email: userProfile.email,
-            name: userProfile.name,
-            phone: userProfile.phone,
-            address: userProfile.address,
-            role: userProfile.role
-          })
-        }
+        const profile = await loadUserProfile(supabase, supabaseUser)
+        setUser(profile)
       }
     } catch (error) {
-      console.error('[v0] Refresh user error:', error)
+      console.error('Refresh user error:', error)
     }
   }
 
