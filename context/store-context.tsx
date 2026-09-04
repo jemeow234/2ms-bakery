@@ -17,7 +17,7 @@ interface StoreContextType {
   deleteProduct: (id: string) => Promise<void>
   updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<boolean>
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<Order | null>
-  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => Promise<void>
   deleteAnnouncement: (id: string) => Promise<void>
   addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => Promise<void>
@@ -226,7 +226,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+  const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PUT',
@@ -237,9 +237,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAdminOrders(prev =>
           prev.map(o => o.id === orderId ? { ...o, status } : o)
         )
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to update order status:', error)
+      return false
     }
   }
 

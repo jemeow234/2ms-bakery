@@ -39,7 +39,7 @@ const statusConfig = {
 }
 
 export default function OrdersPage() {
-  const { orders, updateOrderStatus } = useStore()
+  const { adminOrders: orders, updateOrderStatus } = useStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -53,8 +53,12 @@ export default function OrdersPage() {
     return matchesSearch && matchesStatus
   })
 
-  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
-    updateOrderStatus(orderId, newStatus)
+  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+    const success = await updateOrderStatus(orderId, newStatus)
+    if (!success) {
+      toast.error('Failed to update order status. Please try again.')
+      return
+    }
     toast.success(`Order status updated to ${newStatus}`)
   }
 
