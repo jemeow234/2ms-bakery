@@ -118,7 +118,7 @@ export default function OrdersPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">${todayRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-primary">₱{todayRevenue.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
@@ -189,7 +189,7 @@ export default function OrdersPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className="font-medium text-foreground">${order.total.toFixed(2)}</span>
+                        <span className="font-medium text-foreground">₱{order.total.toFixed(2)}</span>
                       </td>
                       <td className="py-4 px-6">
                         <span className={cn(
@@ -310,11 +310,11 @@ export default function OrdersPage() {
                       <div>
                         <p className="font-medium text-foreground">{item.product.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          ${item.product.price.toFixed(2)} x {item.quantity}
+                          ₱{item.product.price.toFixed(2)} x {item.quantity}
                         </p>
                       </div>
                       <p className="font-medium text-foreground">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        ₱{(item.product.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   ))}
@@ -324,7 +324,7 @@ export default function OrdersPage() {
               <div className="border-t border-border pt-4 flex items-center justify-between">
                 <span className="text-lg font-medium text-foreground">Total</span>
                 <span className="font-serif text-2xl font-bold text-primary">
-                  ${selectedOrder.total.toFixed(2)}
+                  ₱{selectedOrder.total.toFixed(2)}
                 </span>
               </div>
             </div>

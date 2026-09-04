@@ -96,7 +96,7 @@ export function OrderNotifications() {
                       <div>
                         <p className="text-xs text-muted-foreground">Order #{order.id.slice(-6).toUpperCase()}</p>
                         <p className="text-sm font-bold text-foreground">
-                          ${order.total.toFixed(2)}
+                          ₱{order.total.toFixed(2)}
                         </p>
                       </div>
                       <span className={cn('px-3 py-1 rounded-full text-xs font-medium capitalize', getStatusColor(order.status))}>

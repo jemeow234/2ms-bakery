@@ -155,7 +155,7 @@ export default function ReportsPage() {
     }
   }, [orders, products, filterPeriod, selectedMonth])
 
-  const formatCurrency = (value: number) => `$${value.toFixed(2)}`
+  const formatCurrency = (value: number) => `₱${value.toFixed(2)}`
 
   const handleExport = () => {
     const csv = generateCSV()

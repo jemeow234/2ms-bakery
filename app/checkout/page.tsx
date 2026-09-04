@@ -340,7 +340,7 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                           <p className="font-serif text-lg font-bold text-primary whitespace-nowrap">
-                            ${(item.product.price * item.quantity).toFixed(2)}
+                            ₱{(item.product.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
 
@@ -588,7 +588,7 @@ export default function CheckoutPage() {
                         Processing Order...
                       </>
                     ) : (
-                      `Place Order - $${totalPrice.toFixed(2)}`
+                      `Place Order - ₱${totalPrice.toFixed(2)}`
                     )}
                   </Button>
                 </form>
@@ -609,7 +609,7 @@ export default function CheckoutPage() {
                         {item.product.name} x {item.quantity}
                       </span>
                       <span className="text-foreground font-medium">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        ₱{(item.product.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
@@ -618,7 +618,7 @@ export default function CheckoutPage() {
                 <div className="border-t border-border pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Items ({totalQuantity})</span>
-                    <span className="text-foreground">${totalPrice.toFixed(2)}</span>
+                    <span className="text-foreground">₱{totalPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Delivery</span>
@@ -629,7 +629,7 @@ export default function CheckoutPage() {
                   <div className="border-t border-border pt-3 flex justify-between">
                     <span className="font-semibold text-foreground">Total</span>
                     <span className="font-serif text-2xl font-bold text-primary">
-                      ${totalPrice.toFixed(2)}
+                      ₱{totalPrice.toFixed(2)}
                     </span>
                   </div>
                 </div>

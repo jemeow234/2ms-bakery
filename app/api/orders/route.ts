@@ -6,18 +6,15 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await req.json()
     const { items, total, customerName, customerEmail, customerPhone, address, deliveryType, distance, paymentMethod } = body
 
+    // Checkout doesn't require an account — user_id is null for guest orders.
     // Create order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: user.id,
+        user_id: user?.id ?? null,
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
@@ -49,6 +46,7 @@ export async function POST(req: NextRequest) {
     if (itemsError) throw itemsError
 
     // Update product stock
+
     for (const item of items) {
       const { data: product } = await supabase
         .from('products')
@@ -79,7 +77,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json(order)
+    return NextResponse.json({
+      order: {
+        id: order.id,
+        items,
+        total: order.total,
+        customerName: order.customer_name,
+        customerEmail: order.customer_email,
+        customerPhone: order.customer_phone,
+        address: order.address,
+        deliveryType: order.delivery_type,
+        status: order.status,
+        createdAt: order.created_at,
+        paymentMethod: order.payment_method,
+        distance: order.distance ?? undefined,
+      },
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -112,7 +125,25 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    const orders = (data || []).map((order: any) => ({
+      id: order.id,
+      items: (order.order_items || []).map((item: any) => ({
+        product: { id: item.product_id, name: item.product_name, price: item.price },
+        quantity: item.quantity,
+      })),
+      total: order.total,
+      customerName: order.customer_name,
+      customerEmail: order.customer_email,
+      customerPhone: order.customer_phone,
+      address: order.address,
+      deliveryType: order.delivery_type,
+      status: order.status,
+      createdAt: order.created_at,
+      paymentMethod: order.payment_method,
+      distance: order.distance ?? undefined,
+    }))
+
+    return NextResponse.json({ orders })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

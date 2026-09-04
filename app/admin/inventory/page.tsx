@@ -356,7 +356,7 @@ export default function InventoryPage() {
                     <span className="capitalize text-muted-foreground">{product.category}</span>
                   </td>
                   <td className="py-4 px-6">
-                    <span className="font-medium text-foreground">${product.price.toFixed(2)}</span>
+                    <span className="font-medium text-foreground">₱{product.price.toFixed(2)}</span>
                   </td>
                   <td className="py-4 px-6">
                     <span className="font-medium text-foreground">{product.stock}</span>

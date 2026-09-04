@@ -210,7 +210,7 @@ export default function POSPage() {
                   )}
                 </div>
                 <h3 className="font-medium text-foreground truncate">{product.name}</h3>
-                <p className="text-primary font-bold">${product.price.toFixed(2)}</p>
+                <p className="text-primary font-bold">₱{product.price.toFixed(2)}</p>
               </button>
             ))}
           </div>
@@ -259,7 +259,7 @@ export default function POSPage() {
                       {item.product.name}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ${item.product.price.toFixed(2)} each
+                      ₱{item.product.price.toFixed(2)} each
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -321,7 +321,7 @@ export default function POSPage() {
             <div className="flex justify-between mb-4">
               <span className="text-lg font-medium text-foreground">Total</span>
               <span className="font-serif text-2xl font-bold text-primary">
-                ${totalPrice.toFixed(2)}
+                ₱{totalPrice.toFixed(2)}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3">

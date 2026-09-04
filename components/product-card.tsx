@@ -58,7 +58,7 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
           <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
             {product.name}
           </h3>
-          <span className="text-primary font-bold">${product.price.toFixed(2)}</span>
+          <span className="text-primary font-bold">₱{product.price.toFixed(2)}</span>
         </div>
 
         <Button
@@ -112,7 +112,7 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
           </p>
 
           <div className="flex items-center gap-3">
-            <span className="font-serif text-2xl font-bold">${product.price.toFixed(2)}</span>
+            <span className="font-serif text-2xl font-bold">₱{product.price.toFixed(2)}</span>
             <div className="flex items-center border border-white/30 rounded-lg ml-2">
               <button
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
@@ -198,7 +198,7 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
             {product.category}
           </span>
           <span className="font-serif text-xl font-bold text-primary">
-            ${product.price.toFixed(2)}
+            ₱{product.price.toFixed(2)}
           </span>
         </div>
 

@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   const stats = [
     {
       title: 'Total Revenue',
-      value: `$${totalRevenue.toFixed(2)}`,
+      value: `₱${totalRevenue.toFixed(2)}`,
       icon: DollarSign,
       color: 'bg-green-500/10 text-green-600',
       change: '+12% from last month',
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
                       <p className="text-sm text-muted-foreground">{order.customerName}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-foreground">${order.total.toFixed(2)}</p>
+                      <p className="font-medium text-foreground">₱{order.total.toFixed(2)}</p>
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         order.status === 'completed'
                           ? 'bg-green-500/10 text-green-600'
