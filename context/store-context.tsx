@@ -18,8 +18,8 @@ interface StoreContextType {
   updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<boolean>
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<Order | null>
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
-  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => Promise<void>
-  deleteAnnouncement: (id: string) => Promise<void>
+  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
+  deleteAnnouncement: (id: string) => Promise<boolean>
   addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => Promise<void>
   refreshProducts: () => Promise<void>
   refreshOrders: () => Promise<void>
@@ -246,7 +246,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addAnnouncement = async (announcementData: Omit<Announcement, 'id' | 'createdAt'>) => {
+  const addAnnouncement = async (announcementData: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/announcements', {
         method: 'POST',
@@ -256,22 +256,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setAnnouncements(prev => [data.announcement, ...prev])
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to create announcement:', error)
+      return false
     }
   }
 
-  const deleteAnnouncement = async (id: string) => {
+  const deleteAnnouncement = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/announcements/${id}`, {
         method: 'DELETE'
       })
       if (res.ok) {
         setAnnouncements(prev => prev.filter(a => a.id !== id))
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to delete announcement:', error)
+      return false
     }
   }
 
