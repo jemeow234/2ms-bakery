@@ -24,10 +24,6 @@ export interface User {
   role: 'user' | 'admin'
 }
 
-export interface RegisteredUser extends User {
-  password: string
-}
-
 export interface Order {
   id: string
   items: CartItem[]

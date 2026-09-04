@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    return NextResponse.json({ user: data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
