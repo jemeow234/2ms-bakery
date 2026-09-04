@@ -27,7 +27,7 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (user?.role !== 'admin') {
-      router.push('/admin-login')
+      router.push('/login')
       return
     }
 

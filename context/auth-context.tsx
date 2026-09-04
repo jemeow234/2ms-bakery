@@ -18,6 +18,7 @@ interface AuthResult {
   success: boolean
   error?: string
   needsEmailConfirmation?: boolean
+  role?: User['role']
 }
 
 interface AuthContextType {
@@ -73,11 +74,15 @@ async function loadUserProfile(
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
   const [user, setUser] = useState<User | null>(null)
-  // No Supabase client (e.g. missing env vars) means there's nothing to load.
-  const [isLoading, setIsLoading] = useState(() => !!supabase)
+  // Starts true on both server and client (createClient() only returns a
+  // client in the browser, so seeding this from `supabase` would mismatch
+  // during hydration). The effect below resolves it in every code path.
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!supabase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false)
       return
     }
 
@@ -142,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setUser(profile)
-      return { success: true }
+      return { success: true, role: profile.role }
     } catch (error) {
       console.error('Login error:', error)
       return { success: false, error: 'Login failed' }

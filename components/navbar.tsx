@@ -62,30 +62,27 @@ export function Navbar() {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+          <Link href="/" className="group flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
               <span className="text-primary-foreground text-lg font-bold">2</span>
             </div>
             <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">2M&apos;s Bakery</span>
           </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map(link => (
             <button
               key={link.href}
               onClick={() => scrollToSection(link.href)}
               className={cn(
-                'text-sm font-medium transition-all duration-300 hover:text-primary relative',
+                'px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300',
                 activeSection === link.href.replace('#', '')
-                  ? 'text-primary'
-                  : isScrolled ? 'text-foreground' : 'text-foreground'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-foreground hover:bg-primary/5 hover:text-primary'
               )}
             >
               {link.label}
-              {activeSection === link.href.replace('#', '') && (
-                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
             </button>
           ))}
         </div>
@@ -95,6 +92,14 @@ export function Navbar() {
           {user && (
             <OrderNotifications />
           )}
+
+          <Button
+            size="sm"
+            onClick={() => scrollToSection('#products')}
+            className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            Order Now
+          </Button>
 
           <Link href="/checkout">
             <Button variant="ghost" size="icon" className="relative">

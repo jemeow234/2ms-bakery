@@ -7,7 +7,7 @@ import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
 
     if (result.success) {
       toast.success('Welcome back!')
-      router.push('/')
+      router.push(result.role === 'admin' ? '/admin' : '/')
     } else {
       toast.error(result.error || 'Login failed')
     }
@@ -206,16 +206,6 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              {/* Admin Login Link */}
-              <div className="mt-4 text-center">
-                <Link
-                  href="/admin-login"
-                  className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Shield className="h-4 w-4" />
-                  Admin? Login here
-                </Link>
-              </div>
             </>
           ) : (
             /* Registration Form */
