@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Wheat, Clock, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const stats = [
@@ -14,30 +15,17 @@ const values = [
   {
     title: 'Quality Ingredients',
     description: 'We source only the finest organic flour, premium butter, and fresh local produce.',
-    icon: (
-      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-      </svg>
-    ),
+    icon: Wheat,
   },
   {
     title: 'Traditional Methods',
     description: 'Time-honored techniques passed down through generations of master bakers.',
-    icon: (
-      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12,6 12,12 16,14" />
-      </svg>
-    ),
+    icon: Clock,
   },
   {
     title: 'Made with Love',
     description: 'Every loaf and pastry is crafted with passion and attention to detail.',
-    icon: (
-      <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-      </svg>
-    ),
+    icon: Heart,
   },
 ]
 
@@ -132,9 +120,9 @@ export function AboutSection() {
               style={{ transitionDelay: `${600 + index * 150}ms` }}
             >
               <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                {value.icon}
+                <value.icon className="w-8 h-8" strokeWidth={1.5} />
               </div>
-              <h3 className="font-serif text-xl font-semibold text-foreground mb-3">
+              <h3 className="text-xl font-bold text-foreground mb-3">
                 {value.title}
               </h3>
               <p className="text-muted-foreground text-pretty">{value.description}</p>
