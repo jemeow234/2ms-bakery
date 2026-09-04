@@ -36,7 +36,7 @@ export default function AdminLayout({
     <StoreProvider>
       <div className="min-h-screen bg-background flex">
         <AdminSidebar />
-        <main className="flex-1 ml-64 p-8">
+        <main className="flex-1 min-w-0 ml-64 p-8">
           {children}
         </main>
       </div>

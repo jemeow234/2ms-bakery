@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { useStore } from '@/context/store-context'
-import { AdminSidebar } from '@/components/admin/admin-sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,7 +18,7 @@ import {
 type FilterPeriod = 'daily' | 'weekly' | 'monthly'
 
 export default function ReportsPage() {
-  const { orders, products, inventoryLogs } = useStore()
+  const { adminOrders: orders, products, inventoryLogs } = useStore()
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('daily')
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
 
@@ -81,12 +80,15 @@ export default function ReportsPage() {
       .slice(0, 5)
 
     // Category breakdown
+    // order_items only snapshot id/name/price, not category — look it up from
+    // the live product list instead of trusting item.product.category.
+    const categoryById = new Map(products.map(p => [p.id, p.category]))
     const categoryRevenue: Record<string, number> = {}
     filteredOrders
       .filter(o => o.status === 'completed')
       .forEach(order => {
         order.items.forEach(item => {
-          const cat = item.product.category
+          const cat = categoryById.get(item.product.id) || 'other'
           categoryRevenue[cat] = (categoryRevenue[cat] || 0) + item.product.price * item.quantity
         })
       })
@@ -193,38 +195,35 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <AdminSidebar />
-
-      <main className="flex-1 overflow-auto">
-        {/* Header */}
-        <div className="border-b border-border bg-card sticky top-0 z-40">
-          <div className="px-6 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="font-serif text-2xl font-bold text-foreground">Reports & Analytics</h1>
-                <p className="text-sm text-muted-foreground mt-1">Insights into your bakery performance</p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  onClick={handleExport}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </Button>
-                <Button
-                  onClick={handlePrint}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print
-                </Button>
-              </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="border-b border-border bg-card -mx-8 -mt-8 mb-2">
+        <div className="px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:flex-wrap gap-4">
+            <div>
+              <h1 className="font-serif text-2xl font-bold text-foreground">Reports & Analytics</h1>
+              <p className="text-sm text-muted-foreground mt-1">Insights into your bakery performance</p>
             </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={handleExport}
+                variant="outline"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                onClick={handlePrint}
+                variant="outline"
+                className="gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+            </div>
+          </div>
           </div>
         </div>
 
@@ -505,7 +504,6 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
     </div>
   )
 }
