@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -116,7 +117,7 @@ export function ContactSection() {
                   <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
                     {info.icon}
                   </div>
-                  <h3 className="font-serif font-semibold text-foreground mb-2">
+                  <h3 className="font-semibold text-foreground mb-2">
                     {info.title}
                   </h3>
                   {info.details.map((detail, i) => (
@@ -128,12 +129,23 @@ export function ContactSection() {
               ))}
             </div>
 
-            {/* Map placeholder */}
-            <div className="h-64 bg-secondary rounded-2xl overflow-hidden relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-primary mx-auto mb-2" />
-                  <p className="text-muted-foreground">123 Baker Street, Breadville</p>
+            {/* Visit Us panel */}
+            <div className="relative h-64 rounded-2xl overflow-hidden">
+              <Image
+                src="/images/whole-wheat.jpg"
+                alt="Inside 2M's Bakery"
+                fill
+                sizes="(min-width: 1024px) 45vw, 90vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center shrink-0">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold">Find Us In-Store</p>
+                  <p className="text-white/80 text-sm">123 Baker Street, Breadville</p>
                 </div>
               </div>
             </div>
