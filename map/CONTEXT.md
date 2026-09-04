@@ -38,7 +38,7 @@ Universe is about wiring, not quality. A live path may still be internally incon
 
 ## Verification scope and limitations
 
-Cards were verified on 2026-09-04 against branch `Siegfred`, commit `abb7373b5ea22d2381dec93e8a74f066519670a2`. The repository has no committed Supabase migrations or declarative database schema and no test files were found. Therefore this map cannot confirm deployed columns, constraints, indexes, RLS policies, seed accounts, or runtime correctness. `schemas/supabase-data-model.md` is explicitly code-inferred.
+Cards were verified on 2026-09-04 against branch `main`, commit `54998ac6c451df883db082bf8cc72ca78f61e854`. The original audit ran at `Siegfred@abb7373b5ea22d2381dec93e8a74f066519670a2`; re-verified 2026-09-04 after confirming `app/`, `components/`, `context/`, `hooks/`, `lib/`, `middleware.ts`, `package.json`, and `next.config.mjs` are byte-identical between the two commits, so every `path:line` citation still resolves. The repository has no committed Supabase migrations or declarative database schema and no test files were found. Therefore this map cannot confirm deployed columns, constraints, indexes, RLS policies, seed accounts, or runtime correctness. `schemas/supabase-data-model.md` is explicitly code-inferred.
 
 ## Maintenance contract
 
