@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, Lato } from 'next/font/google'
+import { Playfair_Display, Karla } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { CartProvider } from '@/context/cart-context'
 import { AuthProvider } from '@/context/auth-context'
@@ -7,16 +7,15 @@ import { StoreProvider } from '@/context/store-context'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-const playfair = Playfair_Display({ 
+const playfair = Playfair_Display({
   subsets: ["latin"],
-  variable: '--font-serif',
+  variable: '--font-heading',
   display: 'swap'
 });
 
-const lato = Lato({ 
+const karla = Karla({
   subsets: ["latin"],
-  weight: ['300', '400', '700'],
-  variable: '--font-sans',
+  variable: '--font-body',
   display: 'swap'
 });
 
@@ -39,7 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={`${playfair.variable} ${lato.variable} font-sans antialiased`}>
+      <body className={`${playfair.variable} ${karla.variable} font-sans antialiased`}>
         <AuthProvider>
           <StoreProvider>
             <CartProvider>
