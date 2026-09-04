@@ -2,14 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ProductCard } from '@/components/product-card'
-import { initialProducts } from '@/lib/data'
+import { useStore } from '@/context/store-context'
 import { cn } from '@/lib/utils'
 
 export function FeaturedSection() {
   const [isVisible, setIsVisible] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
+  const { products } = useStore()
 
-  const featuredProducts = initialProducts.filter(p => p.featured)
+  const featuredProducts = products.filter(p => p.featured)
 
   useEffect(() => {
     const observer = new IntersectionObserver(

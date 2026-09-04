@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ProductCard } from '@/components/product-card'
-import { initialProducts } from '@/lib/data'
+import { useStore } from '@/context/store-context'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -21,10 +21,11 @@ export function ProductsSection() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sectionRef = useRef<HTMLDivElement>(null)
+  const { products } = useStore()
 
   const filteredProducts = activeCategory === 'all'
-    ? initialProducts
-    : initialProducts.filter(p => p.category === activeCategory)
+    ? products
+    : products.filter(p => p.category === activeCategory)
 
   const visibleProducts = filteredProducts.slice(0, visibleCount)
   const hasMore = visibleCount < filteredProducts.length
