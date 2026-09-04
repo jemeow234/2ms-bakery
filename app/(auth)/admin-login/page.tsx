@@ -36,11 +36,6 @@ export default function AdminLoginPage() {
     setIsLoading(false)
   }
 
-  const fillDemoCredentials = () => {
-    setEmail('admin@2ms-bakery.com')
-    setPassword('admin123')
-  }
-
   return (
     <div className="min-h-screen bg-sidebar flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -118,25 +113,6 @@ export default function AdminLoginPage() {
                 )}
               </Button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Demo Admin Credentials:
-              </p>
-              <p className="text-sm text-foreground font-mono">admin@goldencrust.com</p>
-              <p className="text-sm text-foreground font-mono">admin123</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={fillDemoCredentials}
-                className="mt-3"
-              >
-                Fill Demo Credentials
-              </Button>
-            </div>
 
             {/* Back Link */}
             <div className="mt-6 text-center">

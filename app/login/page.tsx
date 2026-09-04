@@ -85,11 +85,6 @@ export default function LoginPage() {
     setIsLoading(false)
   }
 
-  const fillDemoCredentials = () => {
-    setLoginEmail('user@example.com')
-    setLoginPassword('user123')
-  }
-
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Side - Form */}
@@ -205,24 +200,6 @@ export default function LoginPage() {
                   )}
                 </Button>
               </form>
-
-              {/* Demo Credentials */}
-              <div className="mt-6 p-4 bg-secondary rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Demo Customer Credentials:
-                </p>
-                <p className="text-sm text-foreground font-mono">user@example.com</p>
-                <p className="text-sm text-foreground font-mono">user123</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={fillDemoCredentials}
-                  className="mt-3"
-                >
-                  Fill Demo Credentials
-                </Button>
-              </div>
 
               {/* Admin Login Link */}
               <div className="mt-4 text-center">
