@@ -24,6 +24,7 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
     }
   }, [announcements, isOpen, hasShown])
 
+  
   if (!isOpen || !announcement) return null
 
   return (
