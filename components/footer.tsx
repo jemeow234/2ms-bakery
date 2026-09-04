@@ -123,7 +123,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="pt-8 border-t border-background/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-background/50 text-sm">
-            &copy; {new Date().getFullYear()} Golden Crust Bakery. All rights reserved.
+            &copy; {new Date().getFullYear()} 2M&apos;s Bakery. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-background/50">
             <a href="#" className="hover:text-primary transition-colors">

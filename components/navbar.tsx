@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { useCart } from '@/context/cart-context'
 import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { OrderNotifications } from '@/components/order-notifications'
 import { Menu, ShoppingBag, User, LogOut, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -141,6 +142,9 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72 bg-card">
+              <VisuallyHidden>
+                <SheetTitle>Navigation Menu</SheetTitle>
+              </VisuallyHidden>
               <div className="flex flex-col gap-6 mt-8">
                 {navLinks.map(link => (
                   <button
