@@ -59,19 +59,33 @@ export function FeaturedSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {featuredProducts.map((product, index) => (
+        <div className="grid lg:grid-cols-5 gap-6">
+          {featuredProducts[0] && (
             <div
-              key={product.id}
               className={cn(
-                'transition-all duration-700',
+                'lg:col-span-3 transition-all duration-700',
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               )}
-              style={{ transitionDelay: `${300 + index * 150}ms` }}
+              style={{ transitionDelay: '300ms' }}
             >
-              <ProductCard product={product} featured />
+              <ProductCard product={featuredProducts[0]} variant="spotlight" />
             </div>
-          ))}
+          )}
+
+          <div className="lg:col-span-2 flex flex-col gap-4 lg:h-full lg:justify-between">
+            {featuredProducts.slice(1).map((product, index) => (
+              <div
+                key={product.id}
+                className={cn(
+                  'transition-all duration-700',
+                  isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                )}
+                style={{ transitionDelay: `${450 + index * 150}ms` }}
+              >
+                <ProductCard product={product} variant="compact" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
