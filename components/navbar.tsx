@@ -7,8 +7,8 @@ import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import { OrderNotifications } from '@/components/order-notifications'
-import { Menu, ShoppingBag, User, LogOut, Bell } from 'lucide-react'
+import { NotificationCenter } from '@/components/notification-center'
+import { Menu, ShoppingBag, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -90,9 +90,7 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          {user && (
-            <OrderNotifications />
-          )}
+          <NotificationCenter />
 
           <Button
             size="sm"

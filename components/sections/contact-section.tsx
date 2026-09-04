@@ -23,7 +23,7 @@ const contactInfo = [
   {
     icon: <Mail className="h-5 w-5" />,
     title: 'Email Us',
-    details: ['hello@goldencrust.com', 'orders@goldencrust.com'],
+    details: ['hello@2msbakery.com', 'orders@2msbakery.com'],
   },
   {
     icon: <Clock className="h-5 w-5" />,
