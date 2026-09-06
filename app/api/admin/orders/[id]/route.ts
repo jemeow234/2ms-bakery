@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -22,14 +22,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { error } = await supabase
-      .from('announcements')
-      .delete()
+    const { status } = await req.json()
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status })
       .eq('id', id)
+      .select()
+      .single()
 
     if (error) throw error
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ order: data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

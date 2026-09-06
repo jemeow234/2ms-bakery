@@ -20,8 +20,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
+    // localStorage isn't available during SSR, so the cart must be loaded
+    // in an effect rather than during render.
     const savedCart = localStorage.getItem('bakery-cart')
     if (savedCart) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItems(JSON.parse(savedCart))
     }
     setIsLoaded(true)

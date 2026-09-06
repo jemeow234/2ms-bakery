@@ -16,6 +16,7 @@ import {
   Banknote,
   CheckCircle2,
   User,
+  ShoppingBag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -97,28 +98,31 @@ export default function POSPage() {
 
     setIsProcessing(true)
 
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    addOrder({
+    const order = await addOrder({
       items: cart,
       total: totalPrice,
       customerName: customerName || 'Walk-in Customer',
       customerEmail: '',
       customerPhone: '',
       address: 'In-Store Purchase',
+      deliveryType: 'pickup',
       status: 'completed',
       paymentMethod,
     })
 
+    setIsProcessing(false)
+
+    if (!order) {
+      toast.error('Failed to complete sale. Please try again.')
+      return
+    }
+
     setShowSuccess(true)
+    toast.success('Order completed!')
     setTimeout(() => {
       setShowSuccess(false)
       clearCart()
     }, 2000)
-
-    setIsProcessing(false)
-    toast.success('Order completed!')
   }
 
   if (showSuccess) {
@@ -189,9 +193,7 @@ export default function POSPage() {
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-3 relative">
                   {imageErrors[product.id] ? (
                     <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-4xl">
-                        {product.category === 'bread' ? '🍞' : product.category === 'pastry' ? '🥐' : '🍰'}
-                      </span>
+                      <ShoppingBag className="h-8 w-8 text-muted-foreground" />
                     </div>
                   ) : (
                     <Image
@@ -209,7 +211,7 @@ export default function POSPage() {
                   )}
                 </div>
                 <h3 className="font-medium text-foreground truncate">{product.name}</h3>
-                <p className="text-primary font-bold">${product.price.toFixed(2)}</p>
+                <p className="text-primary font-bold">₱{product.price.toFixed(2)}</p>
               </button>
             ))}
           </div>
@@ -258,7 +260,7 @@ export default function POSPage() {
                       {item.product.name}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ${item.product.price.toFixed(2)} each
+                      ₱{item.product.price.toFixed(2)} each
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -320,7 +322,7 @@ export default function POSPage() {
             <div className="flex justify-between mb-4">
               <span className="text-lg font-medium text-foreground">Total</span>
               <span className="font-serif text-2xl font-bold text-primary">
-                ${totalPrice.toFixed(2)}
+                ₱{totalPrice.toFixed(2)}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-3">

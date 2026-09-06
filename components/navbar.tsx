@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { useCart } from '@/context/cart-context'
 import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { OrderNotifications } from '@/components/order-notifications'
-import { Menu, ShoppingBag, User, LogOut, Bell } from 'lucide-react'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { NotificationCenter } from '@/components/notification-center'
+import { Menu, ShoppingBag, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -62,39 +63,42 @@ export function Navbar() {
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-serif text-lg font-bold">2</span>
+          <Link href="/" className="group flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+              <span className="text-primary-foreground text-lg font-bold">2</span>
             </div>
-            <span className="font-serif text-lg font-bold text-foreground hidden sm:inline">2M&apos;s Bakery</span>
+            <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">2M&apos;s Bakery</span>
           </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map(link => (
             <button
               key={link.href}
               onClick={() => scrollToSection(link.href)}
               className={cn(
-                'text-sm font-medium transition-all duration-300 hover:text-primary relative',
+                'px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300',
                 activeSection === link.href.replace('#', '')
-                  ? 'text-primary'
-                  : isScrolled ? 'text-foreground' : 'text-foreground'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-foreground hover:bg-primary/5 hover:text-primary'
               )}
             >
               {link.label}
-              {activeSection === link.href.replace('#', '') && (
-                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
             </button>
           ))}
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          {user && (
-            <OrderNotifications />
-          )}
+          <NotificationCenter />
+
+          <Button
+            size="sm"
+            onClick={() => scrollToSection('#products')}
+            className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            Order Now
+          </Button>
 
           <Link href="/checkout">
             <Button variant="ghost" size="icon" className="relative">
@@ -136,6 +140,9 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72 bg-card">
+              <VisuallyHidden>
+                <SheetTitle>Navigation Menu</SheetTitle>
+              </VisuallyHidden>
               <div className="flex flex-col gap-6 mt-8">
                 {navLinks.map(link => (
                   <button

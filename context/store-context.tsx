@@ -7,21 +7,24 @@ import { useAuth } from './auth-context'
 interface StoreContextType {
   products: Product[]
   orders: Order[]
+  adminOrders: Order[]
   inventoryLogs: InventoryLog[]
   announcements: Announcement[]
   feedbacks: OrderFeedback[]
   isLoading: boolean
-  updateProduct: (product: Product) => Promise<void>
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>
+  updateProduct: (product: Product) => Promise<boolean>
+  addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>
   deleteProduct: (id: string) => Promise<void>
-  updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<void>
+  updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<boolean>
   addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<Order | null>
-  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>
-  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt'>) => Promise<void>
-  deleteAnnouncement: (id: string) => Promise<void>
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
+  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
+  deleteAnnouncement: (id: string) => Promise<boolean>
   addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => Promise<void>
   refreshProducts: () => Promise<void>
   refreshOrders: () => Promise<void>
+  refreshAdminOrders: () => Promise<void>
+  refreshInventoryLogs: () => Promise<void>
   refreshAnnouncements: () => Promise<void>
 }
 
@@ -31,6 +34,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
+  const [adminOrders, setAdminOrders] = useState<Order[]>([])
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([])
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [feedbacks, setFeedbacks] = useState<OrderFeedback[]>([])
@@ -66,6 +70,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Fetch all orders (admin only)
+  const refreshAdminOrders = async () => {
+    if (!user || user.role !== 'admin') return
+    try {
+      const res = await fetch('/api/admin/orders')
+      if (res.ok) {
+        const data = await res.json()
+        setAdminOrders(data.orders || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch admin orders:', error)
+    }
+  }
+
+  // Fetch inventory activity log (admin only)
+  const refreshInventoryLogs = async () => {
+    if (!user || user.role !== 'admin') return
+    try {
+      const res = await fetch('/api/admin/inventory')
+      if (res.ok) {
+        const data = await res.json()
+        setInventoryLogs(data.logs || [])
+      }
+    } catch (error) {
+      console.error('[v0] Failed to fetch inventory logs:', error)
+    }
+  }
+
   // Fetch announcements
   const refreshAnnouncements = async () => {
     try {
@@ -79,8 +111,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Initial load
+  // Initial load — fetches data from the API, standard effect-based data fetching
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshProducts()
     refreshAnnouncements()
   }, [])
@@ -88,26 +121,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Refresh orders when user changes
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       refreshOrders()
+      if (user.role === 'admin') {
+        refreshAdminOrders()
+        refreshInventoryLogs()
+      }
     }
   }, [user])
 
-  const updateProduct = async (product: Product) => {
+  const updateProduct = async (product: Product): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/products/${product.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(product)
       })
       if (res.ok) {
         setProducts(prev => prev.map(p => p.id === product.id ? product : p))
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to update product:', error)
+      return false
     }
   }
 
-  const addProduct = async (productData: Omit<Product, 'id'>) => {
+  const addProduct = async (productData: Omit<Product, 'id'>): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/products', {
         method: 'POST',
@@ -117,9 +158,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setProducts(prev => [data.product, ...prev])
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to add product:', error)
+      return false
     }
   }
 
@@ -141,7 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     quantity: number,
     type: InventoryLog['type'],
     note?: string
-  ) => {
+  ): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/inventory', {
         method: 'POST',
@@ -150,9 +194,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })
       if (res.ok) {
         await refreshProducts()
+        await refreshInventoryLogs()
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to update stock:', error)
+      return false
     }
   }
 
@@ -166,6 +214,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setOrders(prev => [data.order, ...prev])
+        if (user?.role === 'admin') {
+          setAdminOrders(prev => [data.order, ...prev])
+        }
         return data.order
       }
       return null
@@ -175,7 +226,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+  const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PUT',
@@ -183,16 +234,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ status })
       })
       if (res.ok) {
-        setOrders(prev =>
+        setAdminOrders(prev =>
           prev.map(o => o.id === orderId ? { ...o, status } : o)
         )
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to update order status:', error)
+      return false
     }
   }
 
-  const addAnnouncement = async (announcementData: Omit<Announcement, 'id' | 'createdAt'>) => {
+  const addAnnouncement = async (announcementData: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/announcements', {
         method: 'POST',
@@ -202,22 +256,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setAnnouncements(prev => [data.announcement, ...prev])
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to create announcement:', error)
+      return false
     }
   }
 
-  const deleteAnnouncement = async (id: string) => {
+  const deleteAnnouncement = async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/announcements/${id}`, {
         method: 'DELETE'
       })
       if (res.ok) {
         setAnnouncements(prev => prev.filter(a => a.id !== id))
+        return true
       }
+      return false
     } catch (error) {
       console.error('[v0] Failed to delete announcement:', error)
+      return false
     }
   }
 
@@ -242,6 +302,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       value={{
         products,
         orders,
+        adminOrders,
         inventoryLogs,
         announcements,
         feedbacks,
@@ -257,6 +318,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addFeedback,
         refreshProducts,
         refreshOrders,
+        refreshAdminOrders,
+        refreshInventoryLogs,
         refreshAnnouncements
       }}
     >

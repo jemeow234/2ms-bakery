@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Navbar } from '@/components/navbar'
 import { HeroSection } from '@/components/sections/hero-section'
 import { AboutSection } from '@/components/sections/about-section'
@@ -14,15 +14,13 @@ import { useAuth } from '@/context/auth-context'
 export default function HomePage() {
   const [showAnnouncement, setShowAnnouncement] = useState(false)
   const { user } = useAuth()
-  const [hasShownToday, setHasShownToday] = useState(false)
+  const [shownForUserId, setShownForUserId] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Show announcement modal on login (once per session)
-    if (user && !hasShownToday) {
-      setShowAnnouncement(true)
-      setHasShownToday(true)
-    }
-  }, [user, hasShownToday])
+  // Show announcement modal once per login
+  if (user && shownForUserId !== user.id) {
+    setShownForUserId(user.id)
+    setShowAnnouncement(true)
+  }
 
   return (
     <main className="min-h-screen">

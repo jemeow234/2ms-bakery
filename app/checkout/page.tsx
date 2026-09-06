@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -71,18 +71,18 @@ export default function CheckoutPage() {
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null)
   const [distanceError, setDistanceError] = useState<string | null>(null)
 
-  // Pre-fill form with user data if logged in
-  useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || '',
-      }))
-    }
-  }, [user])
+  // Pre-fill form with user data once, when the user logs in
+  const [prefilledForUserId, setPrefilledForUserId] = useState<string | null>(null)
+  if (user && prefilledForUserId !== user.id) {
+    setPrefilledForUserId(user.id)
+    setFormData(prev => ({
+      ...prev,
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      address: user.address || '',
+    }))
+  }
 
   const handleImageError = (productId: string) => {
     setImageErrors(prev => ({ ...prev, [productId]: true }))
@@ -135,7 +135,7 @@ export default function CheckoutPage() {
     await new Promise(resolve => setTimeout(resolve, 1500))
 
     try {
-      const order = addOrder({
+      const order = await addOrder({
         items: items.map(item => ({
           product: item.product,
           quantity: item.quantity
@@ -150,6 +150,12 @@ export default function CheckoutPage() {
         status: 'pending',
         paymentMethod: formData.paymentMethod,
       })
+
+      if (!order) {
+        toast.error('Failed to place order. Please try again.')
+        setIsProcessing(false)
+        return
+      }
 
       setOrderNumber(order.id)
       setLastOrder(order)
@@ -334,7 +340,7 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                           <p className="font-serif text-lg font-bold text-primary whitespace-nowrap">
-                            ${(item.product.price * item.quantity).toFixed(2)}
+                            ₱{(item.product.price * item.quantity).toFixed(2)}
                           </p>
                         </div>
 
@@ -582,7 +588,7 @@ export default function CheckoutPage() {
                         Processing Order...
                       </>
                     ) : (
-                      `Place Order - $${totalPrice.toFixed(2)}`
+                      `Place Order - ₱${totalPrice.toFixed(2)}`
                     )}
                   </Button>
                 </form>
@@ -603,7 +609,7 @@ export default function CheckoutPage() {
                         {item.product.name} x {item.quantity}
                       </span>
                       <span className="text-foreground font-medium">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        ₱{(item.product.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
@@ -612,7 +618,7 @@ export default function CheckoutPage() {
                 <div className="border-t border-border pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Items ({totalQuantity})</span>
-                    <span className="text-foreground">${totalPrice.toFixed(2)}</span>
+                    <span className="text-foreground">₱{totalPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Delivery</span>
@@ -623,7 +629,7 @@ export default function CheckoutPage() {
                   <div className="border-t border-border pt-3 flex justify-between">
                     <span className="font-semibold text-foreground">Total</span>
                     <span className="font-serif text-2xl font-bold text-primary">
-                      ${totalPrice.toFixed(2)}
+                      ₱{totalPrice.toFixed(2)}
                     </span>
                   </div>
                 </div>

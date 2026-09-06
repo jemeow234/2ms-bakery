@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json(data)
+    return NextResponse.json({ users: data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

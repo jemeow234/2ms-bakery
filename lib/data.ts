@@ -134,20 +134,3 @@ export const initialProducts: Product[] = [
     ingredients: ['Oats', 'Flour', 'Raisins', 'Butter', 'Cinnamon']
   }
 ]
-
-export const users = [
-  {
-    id: '1',
-    email: 'admin@goldencrust.com',
-    password: 'admin123',
-    name: 'Admin User',
-    role: 'admin' as const
-  },
-  {
-    id: '2',
-    email: 'user@example.com',
-    password: 'user123',
-    name: 'John Doe',
-    role: 'user' as const
-  }
-]

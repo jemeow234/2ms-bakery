@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ProductCard } from '@/components/product-card'
-import { initialProducts } from '@/lib/data'
+import { useStore } from '@/context/store-context'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -14,14 +14,36 @@ const categories = [
   { id: 'cookie', label: 'Cookies' },
 ]
 
+const PAGE_SIZE = 8
+
 export function ProductsSection() {
   const [isVisible, setIsVisible] = useState(false)
   const [activeCategory, setActiveCategory] = useState('all')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sectionRef = useRef<HTMLDivElement>(null)
+  const { products } = useStore()
 
   const filteredProducts = activeCategory === 'all'
-    ? initialProducts
-    : initialProducts.filter(p => p.category === activeCategory)
+    ? products
+    : products.filter(p => p.category === activeCategory)
+
+  const visibleProducts = filteredProducts.slice(0, visibleCount)
+  const hasMore = visibleCount < filteredProducts.length
+
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId)
+    setVisibleCount(PAGE_SIZE)
+  }
+
+  useEffect(() => {
+    const onCategorySelect = (e: Event) => {
+      const { category } = (e as CustomEvent<{ category: string }>).detail
+      handleCategoryChange(category)
+    }
+
+    window.addEventListener('products-category-select', onCategorySelect)
+    return () => window.removeEventListener('products-category-select', onCategorySelect)
+  }, [])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -80,7 +102,7 @@ export function ProductsSection() {
               <Button
                 key={category.id}
                 variant={activeCategory === category.id ? 'default' : 'outline'}
-                onClick={() => setActiveCategory(category.id)}
+                onClick={() => handleCategoryChange(category.id)}
                 className={cn(
                   'transition-all duration-300',
                   activeCategory === category.id
@@ -95,7 +117,7 @@ export function ProductsSection() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product, index) => (
+          {visibleProducts.map((product, index) => (
             <div
               key={product.id}
               className={cn(
@@ -108,6 +130,19 @@ export function ProductsSection() {
             </div>
           ))}
         </div>
+
+        {hasMore && (
+          <div className="text-center mt-12">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+              className="border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground px-8"
+            >
+              Load More
+            </Button>
+          </div>
+        )}
 
         {filteredProducts.length === 0 && (
           <div className="text-center py-16">

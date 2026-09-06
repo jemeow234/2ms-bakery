@@ -3,11 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -43,7 +44,7 @@ export default function LoginPage() {
 
     if (result.success) {
       toast.success('Welcome back!')
-      router.push('/')
+      router.push(result.role === 'admin' ? '/admin' : '/')
     } else {
       toast.error(result.error || 'Login failed')
     }
@@ -76,18 +77,18 @@ export default function LoginPage() {
     })
 
     if (result.success) {
-      toast.success('Account created successfully! Welcome to Golden Crust!')
-      router.push('/')
+      if (result.needsEmailConfirmation) {
+        toast.success('Account created! Check your email to confirm it before signing in.')
+        setAuthMode('login')
+      } else {
+        toast.success('Account created successfully! Welcome to 2M\'s Bakery!')
+        router.push('/')
+      }
     } else {
       toast.error(result.error || 'Registration failed')
     }
 
     setIsLoading(false)
-  }
-
-  const fillDemoCredentials = () => {
-    setLoginEmail('user@example.com')
-    setLoginPassword('user123')
   }
 
   return (
@@ -106,9 +107,9 @@ export default function LoginPage() {
           <div className="mb-8">
             <Link href="/" className="flex items-center gap-2 mb-6">
               <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-serif text-2xl font-bold">G</span>
+                <span className="text-primary-foreground font-serif text-2xl font-bold">2</span>
               </div>
-              <span className="font-serif text-2xl font-bold text-foreground">Golden Crust</span>
+              <span className="font-serif text-2xl font-bold text-foreground">2M&apos;s Bakery</span>
             </Link>
             <h1 className="font-serif text-3xl font-bold text-foreground mb-2">
               {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
@@ -206,34 +207,6 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              {/* Demo Credentials */}
-              <div className="mt-6 p-4 bg-secondary rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Demo Customer Credentials:
-                </p>
-                <p className="text-sm text-foreground font-mono">user@example.com</p>
-                <p className="text-sm text-foreground font-mono">user123</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={fillDemoCredentials}
-                  className="mt-3"
-                >
-                  Fill Demo Credentials
-                </Button>
-              </div>
-
-              {/* Admin Login Link */}
-              <div className="mt-4 text-center">
-                <Link
-                  href="/admin-login"
-                  className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Shield className="h-4 w-4" />
-                  Admin? Login here
-                </Link>
-              </div>
             </>
           ) : (
             /* Registration Form */
@@ -363,19 +336,21 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Image */}
-      <div className="hidden lg:flex flex-1 bg-primary relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80" />
-        <div className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Ccircle cx='5' cy='5' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
+      <div className="hidden lg:flex flex-1 relative overflow-hidden">
+        <Image
+          src="/images/focaccia.jpg"
+          alt="Olive focaccia fresh from the oven"
+          fill
+          sizes="50vw"
+          className="object-cover"
         />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary/70" />
         <div className="relative z-10 flex items-center justify-center w-full p-12">
           <div className="text-center text-primary-foreground">
             <div className="w-24 h-24 rounded-full bg-primary-foreground/20 flex items-center justify-center mx-auto mb-6">
-              <span className="font-serif text-5xl font-bold">G</span>
+              <span className="font-serif text-5xl font-bold">2</span>
             </div>
-            <h2 className="font-serif text-4xl font-bold mb-4">Golden Crust</h2>
+            <h2 className="font-serif text-4xl font-bold mb-4">2M&apos;s Bakery</h2>
             <p className="text-primary-foreground/80 max-w-sm mx-auto text-pretty">
               {authMode === 'login' 
                 ? 'Artisan breads and pastries made with love, fresh from our ovens to your table.'

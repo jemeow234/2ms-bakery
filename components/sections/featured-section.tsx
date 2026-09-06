@@ -2,14 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ProductCard } from '@/components/product-card'
-import { initialProducts } from '@/lib/data'
+import { useStore } from '@/context/store-context'
 import { cn } from '@/lib/utils'
 
 export function FeaturedSection() {
   const [isVisible, setIsVisible] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
+  const { products } = useStore()
 
-  const featuredProducts = initialProducts.filter(p => p.featured)
+  const featuredProducts = products.filter(p => p.featured)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -59,19 +60,33 @@ export function FeaturedSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {featuredProducts.map((product, index) => (
+        <div className="grid lg:grid-cols-5 gap-6">
+          {featuredProducts[0] && (
             <div
-              key={product.id}
               className={cn(
-                'transition-all duration-700',
+                'lg:col-span-3 transition-all duration-700',
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               )}
-              style={{ transitionDelay: `${300 + index * 150}ms` }}
+              style={{ transitionDelay: '300ms' }}
             >
-              <ProductCard product={product} featured />
+              <ProductCard product={featuredProducts[0]} variant="spotlight" />
             </div>
-          ))}
+          )}
+
+          <div className="lg:col-span-2 flex flex-col gap-4 lg:h-full lg:justify-between">
+            {featuredProducts.slice(1).map((product, index) => (
+              <div
+                key={product.id}
+                className={cn(
+                  'transition-all duration-700',
+                  isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                )}
+                style={{ transitionDelay: `${450 + index * 150}ms` }}
+              >
+                <ProductCard product={product} variant="compact" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
