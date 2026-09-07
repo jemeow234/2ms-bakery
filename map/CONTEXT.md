@@ -42,6 +42,7 @@ Cards were verified on 2026-09-04 against branch `main`, commit `54998ac6c451df8
 
 ## Maintenance contract
 
+- After each significant committed change, run the reusable synchronization prompt in `_meta/update-prompt.md`.
 - Keep one fact in one card and link to it elsewhere.
 - Mark a card `verified` only after checking every load-bearing citation.
 - Move obsolete cards to `stale`; do not silently rewrite history.
