@@ -31,8 +31,8 @@ export default function ForgotPasswordPage() {
     // below is shown regardless of outcome so we never reveal whether an
     // email address is registered.
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'http://localhost:3000/update-password',
-    })
+  redirectTo: `${window.location.origin}/update-password`,
+})
 
     setIsLoading(false)
     setSubmitted(true)
