@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { useStore } from '@/context/store-context'
 import { Product } from '@/lib/types'
@@ -31,6 +31,8 @@ import {
   AlertTriangle,
   ArrowUpDown,
   History,
+  ImagePlus,
+  X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -55,6 +57,11 @@ export default function InventoryPage() {
     featured: false,
   })
 
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   const [stockUpdate, setStockUpdate] = useState({
     type: 'add' as 'add' | 'remove' | 'adjustment',
     quantity: '',
@@ -63,6 +70,55 @@ export default function InventoryPage() {
 
   const handleImageError = (productId: string) => {
     setImageErrors(prev => ({ ...prev, [productId]: true }))
+  }
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB')
+      return
+    }
+
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  const clearImageSelection = () => {
+    setImageFile(null)
+    setImagePreview('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const uploadProductImage = async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Image upload failed')
+        return null
+      }
+
+      return data.url
+    } catch (error) {
+      console.error('[v0] Failed to upload image:', error)
+      toast.error('Image upload failed')
+      return null
+    }
   }
 
   const filteredProducts = products
@@ -93,6 +149,15 @@ export default function InventoryPage() {
       return
     }
 
+    let imageUrl = '/images/placeholder.jpg'
+    if (imageFile) {
+      setIsUploadingImage(true)
+      const uploadedUrl = await uploadProductImage(imageFile)
+      setIsUploadingImage(false)
+      if (!uploadedUrl) return
+      imageUrl = uploadedUrl
+    }
+
     const success = await addProduct({
       name: newProduct.name,
       description: newProduct.description,
@@ -100,7 +165,7 @@ export default function InventoryPage() {
       category: newProduct.category,
       stock: parseInt(newProduct.stock),
       featured: newProduct.featured,
-      image: '/images/placeholder.jpg',
+      image: imageUrl,
     })
 
     if (!success) {
@@ -116,6 +181,7 @@ export default function InventoryPage() {
       stock: '',
       featured: false,
     })
+    clearImageSelection()
     setIsAddDialogOpen(false)
     toast.success('Product added successfully')
   }
@@ -164,7 +230,13 @@ export default function InventoryPage() {
           <h1 className="font-serif text-3xl font-bold text-foreground">Inventory Management</h1>
           <p className="text-muted-foreground mt-1">Manage your products and stock levels</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog
+          open={isAddDialogOpen}
+          onOpenChange={open => {
+            setIsAddDialogOpen(open)
+            if (!open) clearImageSelection()
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="h-4 w-4 mr-2" />
@@ -176,6 +248,45 @@ export default function InventoryPage() {
               <DialogTitle className="text-foreground">Add New Product</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
+              <div>
+                <Label>Product Image</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-secondary relative flex-shrink-0 border border-border">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="bg-secondary"
+                    />
+                    {imagePreview && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearImageSelection}
+                        className="text-muted-foreground"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Remove image
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div>
                 <Label>Product Name *</Label>
                 <Input
@@ -243,8 +354,12 @@ export default function InventoryPage() {
                 />
                 <Label htmlFor="featured">Featured Product</Label>
               </div>
-              <Button onClick={handleAddProduct} className="w-full bg-primary text-primary-foreground">
-                Add Product
+              <Button
+                onClick={handleAddProduct}
+                disabled={isUploadingImage}
+                className="w-full bg-primary text-primary-foreground"
+              >
+                {isUploadingImage ? 'Uploading image...' : 'Add Product'}
               </Button>
             </div>
           </DialogContent>
