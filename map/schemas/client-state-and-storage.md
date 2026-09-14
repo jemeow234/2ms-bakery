@@ -2,8 +2,8 @@
 type: schema
 status: verified
 universe: live
-verified: 2026-09-04
-revision: main@54998ac6c451df883db082bf8cc72ca78f61e854
+verified: 2026-09-14
+revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
 ---
 
 # Client state and browser storage
@@ -14,27 +14,29 @@ Client providers own in-memory application state; selected values and flags are 
 
 ## Representations
 
-- Root provider order is AuthProvider → StoreProvider → CartProvider (`app/layout.tsx:43-50`). StoreProvider can therefore consume Auth; Cart does not consume Store.
+- Root provider order is AuthProvider → StoreProvider → CartProvider (`app/layout.tsx:42-49`). StoreProvider can therefore consume Auth; Cart does not consume Store.
 - AdminLayout adds another StoreProvider inside the root provider, creating a separate store-state instance for admin descendants (`app/admin/layout.tsx:35-43`).
-- AuthProvider exposes current User, login/register/logout, loading, and refresh (`context/auth-context.tsx:16-23`, `context/auth-context.tsx:265-268`).
-- StoreProvider owns products, orders, inventory logs, announcements, feedback, and API mutations (`context/store-context.tsx:7-26`, `context/store-context.tsx:240-265`).
-- CartProvider persists full CartItem values to `bakery-cart` (`context/cart-context.tsx:18-34`).
-- The admin users page persists a separate collection to `bakery-registered-users` (`app/admin/users/page.tsx:36-47`, `app/admin/users/page.tsx:61-98`).
-- Auth bootstrap checks `bakery-migration-done`; the migration helper writes `bakery-migration-complete` (`context/auth-context.tsx:62-68`; `lib/supabase/migrate.ts:27-33`).
+- AuthProvider exposes current User, login/register/logout, loading, and refresh (`context/auth-context.tsx:24-31`, `context/auth-context.tsx:236-240`).
+- StoreProvider owns products, orders, adminOrders, inventoryLogs, announcements, feedbacks, loading, mutations, and refreshers (`context/store-context.tsx:7-29`, `context/store-context.tsx:300-328`). It loads products and announcements on mount, and orders (plus admin orders and logs for admins) when the user changes (`context/store-context.tsx:115-131`).
+- CartProvider persists full CartItem values to `bakery-cart` (`context/cart-context.tsx:22-37`).
+- NotificationCenter persists the newest seen announcement time to `bakery-last-seen-announcement-at` (`components/notification-center.tsx:14`, `components/notification-center.tsx:23-47`).
+- Auth bootstrap checks and writes `bakery-migration-done`; the migration helper writes `bakery-migration-complete` (`context/auth-context.tsx:98-102`; `lib/supabase/migrate.ts:31`).
+- Middleware refreshes Supabase SSR cookies (`lib/supabase/proxy.ts:13-27`).
 
 ## Boundaries and mismatches
 
-- The two migration keys do not match, so the AuthProvider guard is not satisfied by the helper's own completion write; AuthProvider separately writes its key after the helper returns.
-- StoreProvider accepts successful HTTP status as the gate before applying response values, but several expected wrapper properties do not exist; see `http-api-contracts.md`.
-- A Product captured in `bakery-cart` can become stale relative to both Supabase and `initialProducts`.
-- Admin-local user changes do not update the API-backed `users` table.
+- The two migration keys do not match, so the AuthProvider guard is not satisfied by the helper's own completion write.
+- Admin mutations update only the nested admin StoreProvider; the root instance refetches products and announcements only on mount (`context/store-context.tsx:115-119`).
+- NotificationCenter treats every non-completed order whose `customerEmail` matches the User as unread, with no persisted read state for orders (`components/notification-center.tsx:32-33`).
+- A Product captured in `bakery-cart` can become stale relative to `products` rows.
+- No source reads or writes `bakery-registered-users` any longer.
 
 ## If you change this
 
-**Hits:** Root/admin layouts, provider consumers, hydration behavior, login/session UX, storefront cart, checkout, admin user management, and migration repetition.
+**Hits:** Root/admin layouts, provider consumers, hydration behavior, login/session UX, storefront cart, checkout, the navbar notification badge, and migration repetition.
 
 **Does not hit:** Database RLS or column constraints automatically.
 
 ## See
 
-`app/layout.tsx:35-55`, `context/auth-context.tsx:27-111`, `context/store-context.tsx:30-265`, and `context/cart-context.tsx:18-89`.
+`app/layout.tsx:34-54`, `context/auth-context.tsx:74-240`, `context/store-context.tsx:33-328`, `context/cart-context.tsx:18-94`, and `components/notification-center.tsx:14-48`.

@@ -2,8 +2,8 @@
 type: object
 status: verified
 universe: live
-verified: 2026-09-04
-revision: main@54998ac6c451df883db082bf8cc72ca78f61e854
+verified: 2026-09-14
+revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
 ---
 
 # Cart
@@ -19,9 +19,9 @@ Embedding Product lets UI totals and checkout payloads run without another looku
 ## Shape
 
 - `CartItem` is `{ product: Product, quantity: number }` (`lib/types.ts:13-16`).
-- CartProvider hydrates from `bakery-cart` and writes the full item array back after load (`context/cart-context.tsx:18-34`).
-- Adding by product id merges quantity; zero or negative quantity removes the item (`context/cart-context.tsx:36-64`).
-- Totals derive from embedded product prices (`context/cart-context.tsx:70-74`).
+- CartProvider hydrates from `bakery-cart` in an effect and writes the full item array back after load (`context/cart-context.tsx:22-37`).
+- Adding by product id merges quantity; zero or negative quantity removes the item (`context/cart-context.tsx:39-67`).
+- Totals derive from embedded product prices (`context/cart-context.tsx:73-77`).
 
 ## Connected to
 
@@ -41,4 +41,4 @@ Read and written by CartProvider, product cards, navbar, and checkout. Persisted
 
 ## See
 
-`context/cart-context.tsx:6-89`.
+`context/cart-context.tsx:6-102`.
