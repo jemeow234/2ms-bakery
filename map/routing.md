@@ -1,6 +1,6 @@
 # 2M's Bakery system map
 
-This shelf maps the as-built repository at `main@54998ac6c451df883db082bf8cc72ca78f61e854`. Source code remains authoritative; cards cite it rather than replacing it.
+This shelf maps the as-built repository at `main@6106902a6e119efb2618c157ca3d9e10d6b82bd3`. Source code remains authoritative; cards cite it rather than replacing it.
 
 ## Route by task
 
@@ -15,8 +15,8 @@ This shelf maps the as-built repository at `main@54998ac6c451df883db082bf8cc72ca
 
 ## Colliding names
 
-- **User** can mean a Supabase Auth identity, a `users` table profile, the `User` TypeScript interface, or the browser-local admin record.
-- **Product** can mean an `initialProducts` record, the `Product` interface, or a `products` table row.
+- **User** can mean a Supabase Auth identity, a `users` table profile, or the `User` TypeScript interface.
+- **Product** can mean an `initialProducts` seed record, the `Product` interface, or a `products` table row.
 - **Order** is camelCase in the client model and snake_case in database/API rows; the route does not normalize between them.
 - **Migration** currently means an admin-only seed of `initialProducts`, not a general localStorage migration.
 

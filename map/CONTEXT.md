@@ -30,15 +30,16 @@ Universe is about wiring, not quality. A live path may still be internally incon
 
 | Product term | Code/storage meanings |
 |---|---|
-| User | Supabase Auth user; `users` row; `User`; page-local `RegisteredUser` |
+| User | Supabase Auth user; `users` row; `User` |
 | Product | `Product`; `initialProducts`; `products` row |
 | Order | client `Order`; `orders` row; joined `order_items` rows |
 | Migration | browser flag flow; admin product seed endpoint; broader archived claims |
-| Inventory update | order-time stock decrement; unimplemented `POST /api/admin/inventory` client edge |
+| Inventory update | order-time `sale` decrement; admin `POST /api/admin/inventory` add/remove/adjustment |
+| Order status update | live `PUT /api/admin/orders/[id]`; leftover `PATCH /api/orders/[id]` |
 
 ## Verification scope and limitations
 
-Cards were verified on 2026-09-04 against branch `main`, commit `54998ac6c451df883db082bf8cc72ca78f61e854`. The original audit ran at `Siegfred@abb7373b5ea22d2381dec93e8a74f066519670a2`; re-verified 2026-09-04 after confirming `app/`, `components/`, `context/`, `hooks/`, `lib/`, `middleware.ts`, `package.json`, and `next.config.mjs` are byte-identical between the two commits, so every `path:line` citation still resolves. The repository has no committed Supabase migrations or declarative database schema and no test files were found. Therefore this map cannot confirm deployed columns, constraints, indexes, RLS policies, seed accounts, or runtime correctness. `schemas/supabase-data-model.md` is explicitly code-inferred.
+Cards were re-verified on 2026-09-14 against branch `main`, merge commit `6106902a6e119efb2618c157ca3d9e10d6b82bd3`. The previous pin was `main@54998ac6c451df883db082bf8cc72ca78f61e854` (verified 2026-09-04); 53 application files changed between the two, so every card's `path:line` citations were re-read at the new revision. The repository still has no committed Supabase migrations, declarative database schema, or Storage definition (the tracked `supabase/` folder holds only CLI state files), and no test files were found. Therefore this map cannot confirm deployed columns, constraints, indexes, RLS or Storage policies, Auth URL/email settings, seed accounts, or runtime correctness. `schemas/supabase-data-model.md` is explicitly code-inferred.
 
 ## Maintenance contract
 

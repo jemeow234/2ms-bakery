@@ -2,8 +2,8 @@
 type: object
 status: verified
 universe: live
-verified: 2026-09-04
-revision: main@54998ac6c451df883db082bf8cc72ca78f61e854
+verified: 2026-09-14
+revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
 ---
 
 # Inventory log
@@ -18,28 +18,28 @@ The log is the audit trail accompanying mutable Product stock, allowing administ
 
 ## Shape
 
-- Client `InventoryLog` defines product identity/name, type, quantity, previous/new stock, optional note, and creation time (`lib/types.ts:46-56`).
-- Order creation writes snake_case values with type `sale` after updating Product stock (`app/api/orders/route.ts:51-78`).
-- The admin inventory API implements authenticated admin `GET` and returns raw `inventory_logs` rows (`app/api/admin/inventory/route.ts:4-31`).
-- StoreProvider calls `POST /api/admin/inventory`, but no POST handler exists in that route module (`context/store-context.tsx:139-156`, `app/api/admin/inventory/route.ts:4`). This call edge is ghost.
-- StoreProvider declares `inventoryLogs` state but has no loader for the implemented GET route (`context/store-context.tsx:7-26`, `context/store-context.tsx:30-37`).
+- Client `InventoryLog` defines product identity/name, type `add | remove | sale | adjustment`, quantity, previous/new stock, optional note, and creation time (`lib/types.ts:42-52`).
+- Order creation writes a `sale` log with note `Order #<id>` after updating Product stock (`app/api/orders/route.ts:57-76`).
+- Admin `POST /api/admin/inventory` computes new stock for `add`, `remove` (floored at zero), or `adjustment` (exact value), updates the Product, and inserts a log (`app/api/admin/inventory/route.ts:69-112`).
+- Admin `GET /api/admin/inventory` returns `{ logs }` mapped to camelCase (`app/api/admin/inventory/route.ts:24-43`).
+- StoreProvider loads logs for admins and reloads them after a stock update (`context/store-context.tsx:88-99`, `context/store-context.tsx:122-131`, `context/store-context.tsx:195-198`).
 
 ## Connected to
 
 - Owned by Product through `product_id`.
-- May be produced by Order creation.
+- Produced by Order creation and by admin stock changes.
 - Displayed alongside stock in inventory, dashboard, and report surfaces.
 
 ## If you change this
 
-**Hits:** `schemas/domain-types.md`, `schemas/supabase-data-model.md`, checkout/order stock processing, inventory API, StoreProvider stock mutation, admin inventory/dashboard, and reports.
+**Hits:** `schemas/domain-types.md`, `schemas/supabase-data-model.md`, checkout/order stock processing, admin inventory API, StoreProvider stock mutation, and admin inventory/dashboard/reports.
 
 **Does not hit:** Order status transitions unless code explicitly couples them.
 
 ## Surfaces
 
-Written by the order API in the audited live path. The admin inventory API can read rows, while administrative/reporting pages consume StoreProvider's currently unpopulated `inventoryLogs` state.
+Written by `POST /api/orders` and `POST /api/admin/inventory`. Read through the admin StoreProvider by the inventory page (`app/admin/inventory/page.tsx:547-551`), dashboard (`app/admin/page.tsx:183-198`), and reports (`app/admin/reports/page.tsx:460-474`).
 
 ## See
 
-`app/api/orders/route.ts:51-78` and `app/api/admin/inventory/route.ts:4-33`.
+`app/api/admin/inventory/route.ts:4-118` and `app/api/orders/route.ts:50-78`.

@@ -29,7 +29,7 @@ export default function UpdatePasswordPage() {
     const supabase = createClient()
 
     if (!supabase) {
-      setLinkStatus('invalid')
+      setLinkStatus('invalid') // eslint-disable-line react-hooks/set-state-in-effect -- createClient() is browser-only, so this can't be derived during render
       return
     }
 

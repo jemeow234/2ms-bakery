@@ -14,7 +14,7 @@ Open one process card for Input → Movement → Output. Follow only its consume
 
 ## Output
 
-Six verified movement cards cover session bootstrap, authentication, storefront/cart, checkout/order/stock, admin management, and product seeding.
+Seven verified movement cards cover session bootstrap, authentication, password recovery, storefront/cart, checkout/order/stock, admin management, and product seeding.
 
 ## Human check
 
