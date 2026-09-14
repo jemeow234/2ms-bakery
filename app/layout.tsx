@@ -23,6 +23,9 @@ export const metadata: Metadata = {
   title: '2M\'s Bakery | Artisan Breads & Pastries',
   description: 'Handcrafted artisan breads and pastries made with love. Fresh daily from our ovens to your table.',
   keywords: ['bakery', 'artisan bread', 'pastries', 'fresh baked', 'sourdough'],
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export const viewport: Viewport = {
