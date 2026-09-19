@@ -30,6 +30,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { formatSchedule } from '@/lib/delivery'
 
 const statusConfig = {
   pending: { label: 'Pending', color: 'bg-orange-500/10 text-orange-600', icon: Clock },
@@ -208,6 +209,11 @@ export default function OrdersPage() {
                         <span className="text-muted-foreground text-sm">
                           {new Date(order.createdAt).toLocaleDateString()}
                         </span>
+                        {formatSchedule(order.deliveryDate, order.deliverySession) && (
+                          <p className="text-xs text-primary mt-1">
+                            {formatSchedule(order.deliveryDate, order.deliverySession)}
+                          </p>
+                        )}
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-end gap-2">
@@ -301,6 +307,23 @@ export default function OrdersPage() {
                   <p className="text-sm text-muted-foreground">Address</p>
                   <p className="font-medium text-foreground">{selectedOrder.address || 'N/A'}</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrder.deliveryType === 'delivery' ? 'Delivery slot' : 'Pick-up slot'}
+                  </p>
+                  <p className="font-medium text-foreground">
+                    {formatSchedule(selectedOrder.deliveryDate, selectedOrder.deliverySession) ||
+                      'Immediate'}
+                  </p>
+                </div>
+                {selectedOrder.deliveryType === 'delivery' && selectedOrder.distance != null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Distance</p>
+                    <p className="font-medium text-foreground">
+                      {selectedOrder.distance.toFixed(1)} km
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

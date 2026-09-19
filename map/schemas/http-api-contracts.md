@@ -1,9 +1,9 @@
 ---
 type: schema
-status: verified
+status: stub
 universe: live
-verified: 2026-09-14
-revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
+verified: null
+revision: null
 ---
 
 # HTTP API contracts
@@ -17,7 +17,8 @@ Next.js route modules under `app/api/` define the implemented HTTP methods, auth
 | Route module | Methods | Access and response | In-repo caller |
 |---|---|---|---|
 | `/api/products` | GET, POST | GET public `{ products }`; POST authenticated, selects all rows and returns `{ products }` without inserting (`app/api/products/route.ts:4-40`) | GET: StoreProvider. POST: none (leftover) |
-| `/api/orders` | GET, POST | GET authenticated, user-scoped `{ orders }` camelCase; POST auth optional, `{ order }` camelCase (`app/api/orders/route.ts:4-150`) | StoreProvider |
+| `/api/orders` | GET, POST | GET authenticated, user-scoped `{ orders }` camelCase; POST auth optional, `{ order }` camelCase. POST now 400s on a missing/expired schedule or an out-of-range or ungeocodable delivery address, and 502s when the geocoder is unreachable (`app/api/orders/route.ts:30`, `app/api/orders/route.ts:43`) | StoreProvider |
+| `/api/delivery/quote` | POST | public; `{ found, distanceKm, withinRange, matchedAddress, rangeKm }` or `{ found: false }`; 502 when the geocoder fails (`app/api/delivery/quote/route.ts:6`) | checkout page |
 | `/api/orders/[id]` | GET, PATCH | GET user-scoped raw row; PATCH admin raw row (`app/api/orders/[id]/route.ts:4-75`) | none (leftover) |
 | `/api/announcements` | GET | public `{ announcements }` camelCase with creator names (`app/api/announcements/route.ts:4-46`) | StoreProvider |
 | `/api/feedback` | GET, POST | authenticated; raw array / raw row (`app/api/feedback/route.ts:4-50`) | POST: StoreProvider. GET: none |
@@ -39,7 +40,8 @@ Next.js route modules under `app/api/` define the implemented HTTP methods, auth
 - StoreProvider expects `data.feedback` from feedback POST, but the route returns the raw row (`context/store-context.tsx:291-293`; `app/api/feedback/route.ts:23`).
 - List routes for orders, inventory logs, and public announcements normalize to camelCase, while update/create envelopes for products, admin orders, and users wrap raw snake_case rows (`app/api/admin/products/route.ts:67`; `app/api/admin/orders/[id]/route.ts:36`; `app/api/admin/users/[id]/route.ts:36`).
 - StoreProvider inserts the raw admin-product row directly into `products`, and the users page replaces a list entry with the raw `{ user }` row (`context/store-context.tsx:159-160`; `app/admin/users/page.tsx:103-104`).
-- `POST /api/orders` does not require authentication and accepts client-supplied `status`, `total`, and item prices (`app/api/orders/route.ts:7-40`).
+- `POST /api/orders` does not require authentication and still accepts client-supplied `status`, `total`, and item prices; `distance` is the exception and is now always re-derived server-side (`app/api/orders/route.ts:41`).
+- `PUT /api/admin/orders/[id]` has a side effect beyond its response: setting `completed` schedules a receipt email via `after()` (`app/api/admin/orders/[id]/route.ts:40`).
 - `POST /api/products` authenticates but does not create a product (`app/api/products/route.ts:13-21`).
 - Admin users and admin products PATCH forward the full request body to `update` (`app/api/admin/users/[id]/route.ts:25-29`; `app/api/admin/products/[id]/route.ts:25-29`).
 - Feedback POST forwards camelCase `orderId`/`userId` from the client body while adding snake_case `user_id` (`components/feedback-modal.tsx:29-34`; `app/api/feedback/route.ts:13-17`).

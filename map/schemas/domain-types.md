@@ -1,9 +1,9 @@
 ---
 type: schema
-status: verified
+status: stub
 universe: live
-verified: 2026-09-14
-revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
+verified: null
+revision: null
 ---
 
 # TypeScript domain types
@@ -19,10 +19,12 @@ revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
 | Product | merchandising fields, category union, image, stock, optional ingredient array | `lib/types.ts:1-11` |
 | CartItem | embedded Product and quantity | `lib/types.ts:13-16` |
 | User | profile fields and `user`/`admin` role | `lib/types.ts:18-25` |
-| Order | CartItem array, customer/fulfillment/payment/status fields | `lib/types.ts:27-40` |
-| InventoryLog | `add`/`remove`/`sale`/`adjustment` movement and before/after stock | `lib/types.ts:42-52` |
-| Announcement | message/ad content and creator | `lib/types.ts:54-62` |
-| OrderFeedback | order/user association, rating, comment | `lib/types.ts:64-71` |
+| Order | CartItem array, customer/fulfillment/payment/status fields, optional distance and booked delivery date/session | `lib/types.ts:27-42` |
+| InventoryLog | `add`/`remove`/`sale`/`adjustment` movement and before/after stock | `lib/types.ts:44-54` |
+| Announcement | message/ad content and creator | `lib/types.ts:56-64` |
+| OrderFeedback | order/user association, rating, comment | `lib/types.ts:66-73` |
+
+Delivery rules and slot vocabulary are not in `lib/types.ts`: `DeliverySession`, the two session windows, the radius, and the schedule validators live in `lib/delivery.ts:19`, `lib/delivery.ts:99`, and are shared by the checkout UI and the order route. The email receipt has its own input shape (`lib/email/order-receipt.ts:9`).
 
 ## Boundaries and mismatches
 

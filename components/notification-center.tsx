@@ -205,7 +205,7 @@ export function NotificationCenter() {
                         )}
                         <span>
                           {order.deliveryType === 'delivery' ? 'Delivery' : 'Pick-up'}
-                          {order.deliveryType === 'delivery' && order.distance && ` · ${order.distance.toFixed(1)} km away`}
+                          {order.deliveryType === 'delivery' && order.distance != null && ` · ${order.distance.toFixed(1)} km away`}
                         </span>
                       </div>
                     </div>

@@ -1,9 +1,9 @@
 ---
 type: schema
-status: verified
+status: stub
 universe: live
-verified: 2026-09-14
-revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
+verified: null
+revision: null
 ---
 
 # Runtime configuration
@@ -23,10 +23,16 @@ This card covers configuration that determines whether the Next.js/Supabase path
 - The tab icon comes from the App Router `app/favicon.ico` file convention; the root metadata sets no `icons` override (`app/layout.tsx:22-26`).
 - Password recovery sends `redirectTo` as the current origin plus `/update-password` (`app/forgot-password/page.tsx:33-35`).
 - Product image upload writes to the `product-images` Storage bucket and returns its public URL (`app/api/admin/upload/route.ts:45-53`).
+- Delivery origin comes from `NEXT_PUBLIC_BAKERY_LAT`, `NEXT_PUBLIC_BAKERY_LNG`, and `NEXT_PUBLIC_BAKERY_ADDRESS`, each with a placeholder fallback (`lib/delivery.ts:28`).
+- Geocoding calls OpenStreetMap Nominatim with an identifying `User-Agent`, a 1 req/s gate, and a 24-hour in-process cache; `GEOCODER_USER_AGENT` and `GEOCODE_COUNTRY_CODES` override the defaults (`lib/geocode.ts:55`).
+- Receipt email requires `RESEND_API_KEY`; when it is absent the sender returns null and receipts are skipped rather than throwing. `RECEIPT_FROM_EMAIL` sets the sender (`lib/email/client.ts:9`).
+- The package now depends on `resend` (`package.json:58`).
 
 ## Boundaries and mismatches
 
 - Browser code handles missing Supabase variables by returning null; server code assumes they exist.
+- Bakery coordinates are placeholders, so every delivery distance is wrong until they are set; the plumbing is correct, the origin is not.
+- Whether the Resend key, sending domain, and Nominatim reachability hold in a deployed environment is not visible in this repository.
 - Repository inspection cannot confirm the values or project identity configured in `.env.local` or Vercel.
 - Supabase Auth email confirmation, email delivery, allowed redirect URLs, and the `product-images` bucket's existence and public-read policy are external project settings not present in this repository.
 - Ignoring TypeScript build errors can allow runtime contract defects to ship without failing `next build`.

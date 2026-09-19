@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
       createdAt: order.created_at,
       paymentMethod: order.payment_method,
       distance: order.distance ?? undefined,
+      deliveryDate: order.delivery_date ?? undefined,
+      deliverySession: order.delivery_session ?? undefined,
     }))
 
     return NextResponse.json({ orders })
