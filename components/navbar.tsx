@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useCart } from '@/context/cart-context'
 import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
@@ -64,8 +65,15 @@ export function Navbar() {
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
           <Link href="/" className="group flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
-              <span className="text-primary-foreground text-lg font-bold">2</span>
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+              <Image
+                src="/images/2mslogo-mark.png"
+                alt=""
+                width={80}
+                height={80}
+                priority
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-lg font-bold tracking-tight text-foreground hidden sm:inline">2M&apos;s Bakery</span>
           </Link>

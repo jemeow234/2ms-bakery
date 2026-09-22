@@ -39,6 +39,21 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
+/**
+ * Absolute URL for the logo, or null when we don't have a public one.
+ *
+ * Mail clients can't resolve relative paths and won't load http://localhost,
+ * so a missing or local NEXT_PUBLIC_SITE_URL renders the text wordmark alone
+ * rather than a broken-image icon in the customer's inbox.
+ */
+function logoUrl(): string | null {
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '')
+  if (!base) return null
+  if (!/^https:\/\//i.test(base)) return null
+  if (/^https:\/\/localhost|^https:\/\/127\.0\.0\.1/i.test(base)) return null
+  return `${base}/images/2mslogo-mark.png`
+}
+
 function formatPlacedAt(createdAt: string): string {
   const date = new Date(createdAt)
   if (Number.isNaN(date.getTime())) return createdAt
@@ -86,9 +101,15 @@ export function renderOrderReceipt(order: ReceiptOrder): {
     })
     .join('')
 
+  const logo = logoUrl()
+
   const html = `
 <div style="margin:0;padding:24px;background:#faf7f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    ${logo
+      ? `<img src="${logo}" width="56" height="56" alt=""
+             style="display:block;width:56px;height:56px;border:0;border-radius:28px;margin:0 0 12px;" />`
+      : ''}
     <h1 style="margin:0 0 4px;font-size:22px;color:#1f1b16;">2M's Bakery</h1>
     <p style="margin:0 0 24px;color:#8a7f72;font-size:14px;">Official receipt</p>
 
