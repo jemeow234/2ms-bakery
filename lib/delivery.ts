@@ -2,7 +2,7 @@
 // never offer something the server will reject.
 
 export const MINIMUM_ORDER_QUANTITY = 2
-export const DELIVERY_RANGE_KM = 5
+export const DELIVERY_RANGE_KM = 1
 
 /** A session closes this many hours before it starts. */
 export const ORDER_LEAD_HOURS = 2

@@ -16,7 +16,7 @@ interface StoreContextType {
   addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>
   deleteProduct: (id: string) => Promise<void>
   updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<boolean>
-  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<Order | null>
+  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<{ order: Order | null; error?: string }>
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
   deleteAnnouncement: (id: string) => Promise<boolean>
@@ -204,7 +204,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addOrder = async (orderData: Omit<Order, 'id' | 'createdAt'>): Promise<Order | null> => {
+  const addOrder = async (
+    orderData: Omit<Order, 'id' | 'createdAt'>
+  ): Promise<{ order: Order | null; error?: string }> => {
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -217,12 +219,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (user?.role === 'admin') {
           setAdminOrders(prev => [data.order, ...prev])
         }
-        return data.order
+        return { order: data.order }
       }
-      return null
+      // Pass the API's reason through (out of range, session closed, …) so the
+      // caller can show it instead of a generic failure.
+      const data = await res.json().catch(() => ({}))
+      return { order: null, error: data.error }
     } catch (error) {
       console.error('[v0] Failed to create order:', error)
-      return null
+      return { order: null }
     }
   }
 

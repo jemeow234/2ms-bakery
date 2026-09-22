@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, Loader2, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { LogoMark } from '@/components/logo-mark'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -53,9 +54,7 @@ export default function ForgotPasswordPage() {
 
           <div className="mb-8">
             <Link href="/" className="flex items-center gap-2 mb-6">
-              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-serif text-2xl font-bold">2</span>
-              </div>
+              <LogoMark className="w-14 h-14" priority />
               <span className="font-serif text-2xl font-bold text-foreground">2M&apos;s Bakery</span>
             </Link>
             <h1 className="font-serif text-3xl font-bold text-foreground mb-2">
@@ -122,9 +121,7 @@ export default function ForgotPasswordPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary/70" />
         <div className="relative z-10 flex items-center justify-center w-full p-12">
           <div className="text-center text-primary-foreground">
-            <div className="w-24 h-24 rounded-full bg-primary-foreground/20 flex items-center justify-center mx-auto mb-6">
-              <span className="font-serif text-5xl font-bold">2</span>
-            </div>
+            <LogoMark className="w-32 h-32 mx-auto mb-6 ring-4 ring-primary-foreground/30 shadow-xl" />
             <h2 className="font-serif text-4xl font-bold mb-4">2M&apos;s Bakery</h2>
             <p className="text-primary-foreground/80 max-w-sm mx-auto text-pretty">
               We&apos;ll help you get back into your account in no time.

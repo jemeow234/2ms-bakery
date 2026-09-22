@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -41,6 +41,7 @@ import {
   formatTime,
   getSelectableSessions,
 } from '@/lib/delivery'
+import { LogoMark } from '@/components/logo-mark'
 
 type QuoteStatus = 'idle' | 'loading' | 'ok' | 'out_of_range' | 'not_found' | 'error'
 
@@ -76,6 +77,9 @@ export default function CheckoutPage() {
   const [quoteStatus, setQuoteStatus] = useState<QuoteStatus>('idle')
   const [deliveryDate, setDeliveryDate] = useState('')
   const [deliverySession, setDeliverySession] = useState<DeliverySession | ''>('')
+  // Bumped on every lookup and every address edit, so a slow response for an
+  // older address can never overwrite the result for the current one.
+  const quoteRequestId = useRef(0)
 
   // Pre-fill form with user data once, when the user logs in
   const [prefilledForUserId, setPrefilledForUserId] = useState<string | null>(null)
@@ -106,6 +110,7 @@ export default function CheckoutPage() {
       return null
     }
 
+    const requestId = ++quoteRequestId.current
     setQuoteStatus('loading')
     try {
       const res = await fetch('/api/delivery/quote', {
@@ -114,6 +119,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({ address }),
       })
       const data = await res.json()
+      if (requestId !== quoteRequestId.current) return null
 
       if (!res.ok || !data.found) {
         setDeliveryQuote(null)
@@ -130,23 +136,43 @@ export default function CheckoutPage() {
       setQuoteStatus(quote.withinRange ? 'ok' : 'out_of_range')
       return quote
     } catch {
+      if (requestId !== quoteRequestId.current) return null
       setDeliveryQuote(null)
       setQuoteStatus('error')
       return null
     }
   }
 
+  const resetDeliveryQuote = () => {
+    quoteRequestId.current++
+    setDeliveryQuote(null)
+    setQuoteStatus('idle')
+  }
+
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
   const isDelivery = formData.deliveryType === 'delivery'
   const selectableSessions = deliveryDate ? getSelectableSessions(deliveryDate) : []
   const hasSchedule = Boolean(deliveryDate && deliverySession)
+  // Only a known-bad address blocks the button. handleSubmit re-checks anything
+  // unverified itself, so a pre-filled address, a failed lookup, or a click that
+  // lands while the blur-triggered check is running all still go through.
+  const addressBlocksCheckout =
+    isDelivery && (quoteStatus === 'out_of_range' || quoteStatus === 'not_found')
   const canCheckout =
-    totalQuantity >= MINIMUM_ORDER_QUANTITY &&
-    hasSchedule &&
-    (!isDelivery || quoteStatus === 'ok')
+    totalQuantity >= MINIMUM_ORDER_QUANTITY && hasSchedule && !addressBlocksCheckout
+
+  // An address pre-filled from the profile never gets a blur event, so check it
+  // as soon as the customer reaches the details step.
+  const goToDetails = () => {
+    setStep('details')
+    if (isDelivery && quoteStatus === 'idle' && formData.address.trim()) {
+      fetchDeliveryQuote(formData.address)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isProcessing) return
 
     // Validate minimum quantity
     if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
@@ -159,6 +185,10 @@ export default function CheckoutPage() {
       return
     }
 
+    // Lock the button before the address check, not after — otherwise a
+    // double-click during the lookup places the order twice.
+    setIsProcessing(true)
+
     // Use the returned quote directly — reading it back from state here would
     // pick up the previous render's value.
     let quote = deliveryQuote
@@ -168,23 +198,23 @@ export default function CheckoutPage() {
       }
       if (!quote) {
         toast.error("We couldn't verify that address. Please check it and try again.")
+        setIsProcessing(false)
         return
       }
       if (!quote.withinRange) {
         toast.error(
           `That address is ${quote.distanceKm.toFixed(1)}km away. Maximum delivery range is ${DELIVERY_RANGE_KM}km.`
         )
+        setIsProcessing(false)
         return
       }
     }
-
-    setIsProcessing(true)
 
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 1500))
 
     try {
-      const order = await addOrder({
+      const { order, error } = await addOrder({
         items: items.map(item => ({
           product: item.product,
           quantity: item.quantity
@@ -203,7 +233,7 @@ export default function CheckoutPage() {
       })
 
       if (!order) {
-        toast.error('Failed to place order. Please try again.')
+        toast.error(error || 'Failed to place order. Please try again.')
         setIsProcessing(false)
         return
       }
@@ -284,9 +314,7 @@ export default function CheckoutPage() {
           </Link>
 
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-serif text-lg font-bold">2</span>
-            </div>
+            <LogoMark className="w-9 h-9" priority />
             <span className="font-serif text-lg font-bold text-foreground">2M&apos;s Bakery</span>
           </Link>
 
@@ -343,7 +371,7 @@ export default function CheckoutPage() {
                 </button>
                 <div className="h-px flex-1 bg-border min-w-4" />
                 <button
-                  onClick={() => items.length > 0 && setStep('details')}
+                  onClick={() => items.length > 0 && goToDetails()}
                   disabled={items.length === 0}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap',
@@ -477,8 +505,13 @@ export default function CheckoutPage() {
                       value={formData.deliveryType}
                       onValueChange={(value: 'delivery' | 'pickup') => {
                         setFormData(s => ({ ...s, deliveryType: value }))
-                        setDeliveryQuote(null)
-                        setQuoteStatus('idle')
+                        // Switching back to delivery keeps the typed address, so
+                        // re-check it rather than leaving it unverified.
+                        if (value === 'delivery' && formData.address.trim()) {
+                          fetchDeliveryQuote(formData.address)
+                        } else {
+                          resetDeliveryQuote()
+                        }
                       }}
                       className="grid sm:grid-cols-2 gap-4"
                     >
@@ -612,7 +645,7 @@ export default function CheckoutPage() {
                       type="tel"
                       value={formData.phone}
                       onChange={e => setFormData(s => ({ ...s, phone: e.target.value }))}
-                      placeholder="(555) 123-4567"
+                      placeholder="0917 123 4567"
                       required
                       className="mt-2 bg-secondary"
                     />
@@ -628,11 +661,12 @@ export default function CheckoutPage() {
                           setFormData(s => ({ ...s, address: e.target.value }))
                           // Invalidate the previous quote so an edited address
                           // can never be submitted with a stale distance.
-                          setDeliveryQuote(null)
-                          setQuoteStatus('idle')
+                          resetDeliveryQuote()
                         }}
-                        onBlur={() => fetchDeliveryQuote(formData.address)}
-                        placeholder="123 Main St, City, State 12345"
+                        onBlur={() => {
+                          if (quoteStatus === 'idle') fetchDeliveryQuote(formData.address)
+                        }}
+                        placeholder="House no., Street, Barangay, City"
                         required
                         className="mt-2 bg-secondary"
                       />
@@ -704,7 +738,7 @@ export default function CheckoutPage() {
                         <CreditCard className="h-5 w-5 text-primary" />
                         <div>
                           <p className="font-medium text-foreground">Card Payment</p>
-                          <p className="text-sm text-muted-foreground">Pay on delivery</p>
+                          <p className="text-sm text-muted-foreground">{isDelivery ? 'Pay on delivery' : 'Pay on pick-up'}</p>
                         </div>
                       </label>
                       <label
@@ -720,7 +754,7 @@ export default function CheckoutPage() {
                         <Banknote className="h-5 w-5 text-primary" />
                         <div>
                           <p className="font-medium text-foreground">Cash</p>
-                          <p className="text-sm text-muted-foreground">Pay on delivery</p>
+                          <p className="text-sm text-muted-foreground">{isDelivery ? 'Pay on delivery' : 'Pay on pick-up'}</p>
                         </div>
                       </label>
                     </RadioGroup>
@@ -789,7 +823,7 @@ export default function CheckoutPage() {
                       if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
                         toast.error(`Add ${MINIMUM_ORDER_QUANTITY - totalQuantity} more item(s) to checkout`)
                       } else {
-                        setStep('details')
+                        goToDetails()
                       }
                     }}
                     className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground"

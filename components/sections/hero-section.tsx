@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
+import { LogoMark } from '@/components/logo-mark'
 
 export function HeroSection() {
   const heroRef = useRef<HTMLDivElement>(null)
@@ -97,6 +98,10 @@ export function HeroSection() {
                 className="object-cover"
               />
             </div>
+            <LogoMark
+              priority
+              className="absolute -bottom-5 left-4 sm:-bottom-6 sm:-left-6 w-24 h-24 sm:w-32 sm:h-32 ring-4 ring-background shadow-xl"
+            />
           </div>
         </div>
       </div>

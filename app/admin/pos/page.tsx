@@ -98,7 +98,7 @@ export default function POSPage() {
 
     setIsProcessing(true)
 
-    const order = await addOrder({
+    const { order, error } = await addOrder({
       items: cart,
       total: totalPrice,
       customerName: customerName || 'Walk-in Customer',
@@ -113,7 +113,7 @@ export default function POSPage() {
     setIsProcessing(false)
 
     if (!order) {
-      toast.error('Failed to complete sale. Please try again.')
+      toast.error(error || 'Failed to complete sale. Please try again.')
       return
     }
 
