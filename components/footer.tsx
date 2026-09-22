@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Facebook, Instagram, Twitter } from 'lucide-react'
+import { LogoMark } from '@/components/logo-mark'
 
 const footerLinks = {
   shop: [
@@ -38,9 +39,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xl font-bold">2</span>
-              </div>
+              <LogoMark className="w-12 h-12" />
               <span className="text-xl font-bold">2M&apos;s Bakery</span>
             </Link>
             <p className="text-background/70 mb-6 max-w-sm text-pretty">
