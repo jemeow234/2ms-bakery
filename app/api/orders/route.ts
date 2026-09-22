@@ -1,5 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
+import { DELIVERY_RANGE_KM, isScheduleValid } from '@/lib/delivery'
+import { quoteDelivery } from '@/lib/geocode'
+import { sendOrderReceipt } from '@/lib/email/send-receipt'
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,7 +10,59 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     const body = await req.json()
-    const { items, total, customerName, customerEmail, customerPhone, address, deliveryType, distance, paymentMethod, status } = body
+    const {
+      items,
+      total,
+      customerName,
+      customerEmail,
+      customerPhone,
+      address,
+      deliveryType,
+      paymentMethod,
+      status,
+      deliveryDate,
+      deliverySession,
+    } = body
+
+    // POS walk-in sales are created already `completed` and fulfilled on the
+    // spot, so they carry no schedule. Every other order must have one.
+    const isWalkIn = status === 'completed'
+    if (!isWalkIn && !isScheduleValid(deliveryDate, deliverySession)) {
+      return NextResponse.json(
+        { error: 'Please choose a delivery date and session that is still available.' },
+        { status: 400 }
+      )
+    }
+
+    // Never trust the client's distance — re-derive it from the address so the
+    // delivery radius cannot be bypassed by a crafted request.
+    let serverDistance: number | null = null
+    if (deliveryType === 'delivery') {
+      let quote
+      try {
+        quote = await quoteDelivery(address ?? '')
+      } catch {
+        return NextResponse.json(
+          { error: "We couldn't verify that address right now. Please try again." },
+          { status: 502 }
+        )
+      }
+      if (!quote.found) {
+        return NextResponse.json(
+          { error: 'We could not find that delivery address.' },
+          { status: 400 }
+        )
+      }
+      if (!quote.withinRange) {
+        return NextResponse.json(
+          {
+            error: `That address is ${quote.distanceKm.toFixed(1)}km away, beyond our ${DELIVERY_RANGE_KM}km delivery range.`,
+          },
+          { status: 400 }
+        )
+      }
+      serverDistance = quote.distanceKm
+    }
 
     // Checkout doesn't require an account — user_id is null for guest orders.
     // Create order
@@ -20,7 +75,9 @@ export async function POST(req: NextRequest) {
         customer_phone: customerPhone,
         address,
         delivery_type: deliveryType,
-        distance,
+        distance: serverDistance,
+        delivery_date: isWalkIn ? null : deliveryDate,
+        delivery_session: isWalkIn ? null : deliverySession,
         total,
         payment_method: paymentMethod,
         status: status || 'pending'
@@ -77,6 +134,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // POS sales never pass through the admin status route, so their receipt is
+    // triggered here instead.
+    if (order.status === 'completed') {
+      after(() => sendOrderReceipt(order.id))
+    }
+
     return NextResponse.json({
       order: {
         id: order.id,
@@ -91,6 +154,8 @@ export async function POST(req: NextRequest) {
         createdAt: order.created_at,
         paymentMethod: order.payment_method,
         distance: order.distance ?? undefined,
+        deliveryDate: order.delivery_date ?? undefined,
+        deliverySession: order.delivery_session ?? undefined,
       },
     })
   } catch (error: any) {
@@ -141,6 +206,8 @@ export async function GET(req: NextRequest) {
       createdAt: order.created_at,
       paymentMethod: order.payment_method,
       distance: order.distance ?? undefined,
+      deliveryDate: order.delivery_date ?? undefined,
+      deliverySession: order.delivery_session ?? undefined,
     }))
 
     return NextResponse.json({ orders })

@@ -37,6 +37,8 @@ export interface Order {
   createdAt: string
   paymentMethod: 'cash' | 'card'
   distance?: number
+  deliveryDate?: string
+  deliverySession?: 'morning' | 'afternoon'
 }
 
 export interface InventoryLog {

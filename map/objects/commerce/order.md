@@ -1,9 +1,9 @@
 ---
 type: object
-status: verified
+status: stub
 universe: live
-verified: 2026-09-14
-revision: main@6106902a6e119efb2618c157ca3d9e10d6b82bd3
+verified: null
+revision: null
 ---
 
 # Order
@@ -18,8 +18,10 @@ It is the durable transaction boundary between a cart (or an in-store POS sale) 
 
 ## Shape
 
-- Client `Order` contains items, total, customer fields, address, delivery type, status, creation time, payment method, and optional distance (`lib/types.ts:27-40`).
-- Creation maps camelCase request fields to snake_case `orders` columns, sets `user_id` to null for guests, and uses the request `status` or `pending` (`app/api/orders/route.ts:10-29`).
+- Client `Order` contains items, total, customer fields, address, delivery type, status, creation time, payment method, optional distance, and an optional booked delivery date and session (`lib/types.ts:27-42`).
+- A delivery session is one of two fixed windows, `morning` or `afternoon` (`lib/delivery.ts:19`).
+- Creation maps camelCase request fields to snake_case `orders` columns, sets `user_id` to null for guests, and uses the request `status` or `pending`. `distance` is re-derived server-side and the client's value is ignored (`app/api/orders/route.ts:41`, `app/api/orders/route.ts:79-80`).
+- A completed order carries `receipt_sent_at`, the claim marker that makes receipt email sending idempotent (`lib/email/send-receipt.ts:14`).
 - Order POST, user GET, and admin GET all return camelCase Orders whose items contain `{ id, name, price }` product stubs (`app/api/orders/route.ts:80-95`, `app/api/orders/route.ts:128-146`; `app/api/admin/orders/route.ts:40-58`).
 - The admin UI updates status through `PUT /api/admin/orders/[id]`, which returns the raw row as `{ order }` (`context/store-context.tsx:229-235`; `app/api/admin/orders/[id]/route.ts:25-36`).
 - `GET` and `PATCH /api/orders/[id]` remain implemented but have no in-repo caller (`app/api/orders/[id]/route.ts:4-75`).
@@ -30,6 +32,7 @@ It is the durable transaction boundary between a cart (or an in-store POS sale) 
 - Owns Order items.
 - Creation changes Product stock and produces Inventory logs.
 - Can receive Order feedback.
+- Reaching `completed` status emits one receipt email to `customer_email`.
 
 ## If you change this
 

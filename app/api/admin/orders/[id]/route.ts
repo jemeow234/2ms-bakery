@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
+import { sendOrderReceipt } from '@/lib/email/send-receipt'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,6 +33,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .single()
 
     if (error) throw error
+
+    // Email the receipt without blocking the admin UI. sendOrderReceipt is
+    // idempotent, so flipping the status back and forth won't re-send.
+    if (data?.status === 'completed') {
+      after(() => sendOrderReceipt(id))
+    }
 
     return NextResponse.json({ order: data })
   } catch (error: any) {

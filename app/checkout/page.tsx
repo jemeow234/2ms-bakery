@@ -25,25 +25,29 @@ import {
   LogIn,
   MapPin,
   AlertCircle,
+  Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  BAKERY_ORIGIN,
+  DELIVERY_RANGE_KM,
+  DELIVERY_SESSIONS,
+  DELIVERY_SESSION_KEYS,
+  DeliverySession,
+  MINIMUM_ORDER_QUANTITY,
+  bakeryTodayISO,
+  formatSchedule,
+  formatTime,
+  getSelectableSessions,
+} from '@/lib/delivery'
 
-const MINIMUM_ORDER_QUANTITY = 2
-const DELIVERY_RANGE_KM = 5
-const BAKERY_LOCATION = { lat: 40.7128, lng: -74.0060 } // Example coordinates
+type QuoteStatus = 'idle' | 'loading' | 'ok' | 'out_of_range' | 'not_found' | 'error'
 
-// Simple distance calculation (haversine formula)
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371 // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
+interface DeliveryQuoteState {
+  distanceKm: number
+  withinRange: boolean
+  matchedAddress: string
 }
 
 export default function CheckoutPage() {
@@ -68,8 +72,10 @@ export default function CheckoutPage() {
     paymentMethod: 'card' as 'card' | 'cash',
   })
 
-  const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null)
-  const [distanceError, setDistanceError] = useState<string | null>(null)
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuoteState | null>(null)
+  const [quoteStatus, setQuoteStatus] = useState<QuoteStatus>('idle')
+  const [deliveryDate, setDeliveryDate] = useState('')
+  const [deliverySession, setDeliverySession] = useState<DeliverySession | ''>('')
 
   // Pre-fill form with user data once, when the user logs in
   const [prefilledForUserId, setPrefilledForUserId] = useState<string | null>(null)
@@ -88,28 +94,56 @@ export default function CheckoutPage() {
     setImageErrors(prev => ({ ...prev, [productId]: true }))
   }
 
-  const checkDeliveryDistance = async (address: string) => {
-    if (formData.deliveryType === 'pickup') {
-      setDistanceError(null)
-      return true
+  /**
+   * Geocodes the address server-side and returns the quote. Callers must use
+   * the returned value rather than reading `deliveryQuote` back from state,
+   * which is a render behind.
+   */
+  const fetchDeliveryQuote = async (address: string): Promise<DeliveryQuoteState | null> => {
+    if (!address.trim()) {
+      setDeliveryQuote(null)
+      setQuoteStatus('idle')
+      return null
     }
 
-    // Simulate geocoding - In real app, use Google Maps API
-    // For demo: simple validation based on address keywords
-    const distance = Math.random() * 10
-    setDeliveryDistance(distance)
+    setQuoteStatus('loading')
+    try {
+      const res = await fetch('/api/delivery/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      })
+      const data = await res.json()
 
-    if (distance > DELIVERY_RANGE_KM) {
-      setDistanceError(`Address is ${distance.toFixed(1)}km away. Maximum delivery range is ${DELIVERY_RANGE_KM}km`)
-      return false
+      if (!res.ok || !data.found) {
+        setDeliveryQuote(null)
+        setQuoteStatus(res.ok ? 'not_found' : 'error')
+        return null
+      }
+
+      const quote: DeliveryQuoteState = {
+        distanceKm: data.distanceKm,
+        withinRange: data.withinRange,
+        matchedAddress: data.matchedAddress,
+      }
+      setDeliveryQuote(quote)
+      setQuoteStatus(quote.withinRange ? 'ok' : 'out_of_range')
+      return quote
+    } catch {
+      setDeliveryQuote(null)
+      setQuoteStatus('error')
+      return null
     }
-
-    setDistanceError(null)
-    return true
   }
 
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
-  const canCheckout = totalQuantity >= MINIMUM_ORDER_QUANTITY && !distanceError
+  const isDelivery = formData.deliveryType === 'delivery'
+  const selectableSessions = deliveryDate ? getSelectableSessions(deliveryDate) : []
+  const hasSchedule = Boolean(deliveryDate && deliverySession)
+  const canCheckout =
+    totalQuantity >= MINIMUM_ORDER_QUANTITY &&
+    hasSchedule &&
+    (!isDelivery || quoteStatus === 'ok')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -120,11 +154,26 @@ export default function CheckoutPage() {
       return
     }
 
-    // Check delivery distance if delivery
-    if (formData.deliveryType === 'delivery') {
-      const isValid = await checkDeliveryDistance(formData.address)
-      if (!isValid) {
-        toast.error('Delivery address is too far. Please choose Pick-up or select a closer address.')
+    if (!hasSchedule) {
+      toast.error('Please choose a delivery date and session')
+      return
+    }
+
+    // Use the returned quote directly — reading it back from state here would
+    // pick up the previous render's value.
+    let quote = deliveryQuote
+    if (isDelivery) {
+      if (quoteStatus !== 'ok' || !quote) {
+        quote = await fetchDeliveryQuote(formData.address)
+      }
+      if (!quote) {
+        toast.error("We couldn't verify that address. Please check it and try again.")
+        return
+      }
+      if (!quote.withinRange) {
+        toast.error(
+          `That address is ${quote.distanceKm.toFixed(1)}km away. Maximum delivery range is ${DELIVERY_RANGE_KM}km.`
+        )
         return
       }
     }
@@ -146,7 +195,9 @@ export default function CheckoutPage() {
         customerPhone: formData.phone,
         address: formData.address,
         deliveryType: formData.deliveryType,
-        distance: deliveryDistance || undefined,
+        distance: isDelivery && quote ? quote.distanceKm : undefined,
+        deliveryDate,
+        deliverySession: deliverySession as DeliverySession,
         status: 'pending',
         paymentMethod: formData.paymentMethod,
       })
@@ -186,13 +237,19 @@ export default function CheckoutPage() {
             </p>
             <p className="font-mono text-lg font-bold text-primary mb-6">{orderNumber}</p>
             <p className="text-muted-foreground text-sm mb-2">
-              {formData.deliveryType === 'delivery' 
+              {formData.deliveryType === 'delivery'
                 ? `Delivery to ${formData.address}`
                 : 'Pick-up at 2M\'s Bakery'
               }
             </p>
+            {formatSchedule(deliveryDate, deliverySession || null) && (
+              <p className="text-sm font-medium text-primary mb-2">
+                {formatSchedule(deliveryDate, deliverySession || null)}
+              </p>
+            )}
             <p className="text-muted-foreground text-sm mb-8">
-              We&apos;ll prepare your items with love. You&apos;ll receive a confirmation email shortly.
+              We&apos;ll prepare your items with love. We&apos;ll email your receipt to{' '}
+              {formData.email} once your order is completed.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/">
@@ -420,7 +477,8 @@ export default function CheckoutPage() {
                       value={formData.deliveryType}
                       onValueChange={(value: 'delivery' | 'pickup') => {
                         setFormData(s => ({ ...s, deliveryType: value }))
-                        setDistanceError(null)
+                        setDeliveryQuote(null)
+                        setQuoteStatus('idle')
                       }}
                       className="grid sm:grid-cols-2 gap-4"
                     >
@@ -457,6 +515,68 @@ export default function CheckoutPage() {
                         </div>
                       </label>
                     </RadioGroup>
+                  </div>
+
+                  {/* Delivery / pick-up schedule */}
+                  <div>
+                    <Label className="mb-3 block">
+                      {isDelivery ? 'Delivery Time' : 'Pick-up Time'}
+                    </Label>
+                    <Input
+                      type="date"
+                      value={deliveryDate}
+                      min={bakeryTodayISO()}
+                      onChange={e => {
+                        setDeliveryDate(e.target.value)
+                        setDeliverySession('')
+                      }}
+                      required
+                      className="bg-secondary"
+                    />
+                    <RadioGroup
+                      value={deliverySession}
+                      onValueChange={(value: DeliverySession) => setDeliverySession(value)}
+                      className="grid sm:grid-cols-2 gap-4 mt-4"
+                    >
+                      {DELIVERY_SESSION_KEYS.map(key => {
+                        const session = DELIVERY_SESSIONS[key]
+                        const disabled = !deliveryDate || !selectableSessions.includes(key)
+                        return (
+                          <label
+                            key={key}
+                            htmlFor={key}
+                            className={cn(
+                              'flex items-center gap-3 p-4 rounded-xl border-2 transition-all',
+                              disabled
+                                ? 'opacity-50 cursor-not-allowed border-border'
+                                : deliverySession === key
+                                  ? 'border-primary bg-primary/5 cursor-pointer'
+                                  : 'border-border hover:border-primary/30 cursor-pointer'
+                            )}
+                          >
+                            <RadioGroupItem value={key} id={key} disabled={disabled} />
+                            <Clock className="h-5 w-5 text-primary" />
+                            <div>
+                              <p className="font-medium text-foreground">{session.label}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatTime(session.start)} – {formatTime(session.end)}
+                              </p>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </RadioGroup>
+                    {!deliveryDate && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Choose a date to see available sessions.
+                      </p>
+                    )}
+                    {deliveryDate && selectableSessions.length === 0 && (
+                      <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        No sessions left on that date. Please pick a later date.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -504,21 +624,46 @@ export default function CheckoutPage() {
                       <Input
                         id="address"
                         value={formData.address}
-                        onChange={e => setFormData(s => ({ ...s, address: e.target.value }))}
-                        onBlur={() => checkDeliveryDistance(formData.address)}
+                        onChange={e => {
+                          setFormData(s => ({ ...s, address: e.target.value }))
+                          // Invalidate the previous quote so an edited address
+                          // can never be submitted with a stale distance.
+                          setDeliveryQuote(null)
+                          setQuoteStatus('idle')
+                        }}
+                        onBlur={() => fetchDeliveryQuote(formData.address)}
                         placeholder="123 Main St, City, State 12345"
                         required
                         className="mt-2 bg-secondary"
                       />
-                      {deliveryDistance !== null && formData.deliveryType === 'delivery' && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Estimated distance: {deliveryDistance.toFixed(1)}km
+                      {quoteStatus === 'loading' && (
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Checking distance…
                         </p>
                       )}
-                      {distanceError && (
+                      {quoteStatus === 'ok' && deliveryQuote && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {deliveryQuote.distanceKm.toFixed(1)}km away · {deliveryQuote.matchedAddress}
+                        </p>
+                      )}
+                      {quoteStatus === 'out_of_range' && deliveryQuote && (
                         <p className="text-xs text-destructive mt-2 flex items-center gap-1">
                           <AlertCircle className="h-3 w-3" />
-                          {distanceError}
+                          Address is {deliveryQuote.distanceKm.toFixed(1)}km away. Maximum delivery
+                          range is {DELIVERY_RANGE_KM}km.
+                        </p>
+                      )}
+                      {quoteStatus === 'not_found' && (
+                        <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          We couldn&apos;t find that address. Please add more detail.
+                        </p>
+                      )}
+                      {quoteStatus === 'error' && (
+                        <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Address check is unavailable right now. Please try again.
                         </p>
                       )}
                     </div>
@@ -527,9 +672,13 @@ export default function CheckoutPage() {
                   {formData.deliveryType === 'pickup' && (
                     <div className="p-4 bg-secondary rounded-lg">
                       <p className="text-sm font-medium text-foreground">Pick-up Location</p>
-                      <p className="text-sm text-muted-foreground mt-1">2M&apos;s Bakery</p>
-                      <p className="text-sm text-muted-foreground">123 Main Street, City, State 12345</p>
-                      <p className="text-sm text-muted-foreground mt-2">Hours: 7am - 8pm Daily</p>
+                      <p className="text-sm text-muted-foreground mt-1">{BAKERY_ORIGIN.address}</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Collection sessions: {formatTime(DELIVERY_SESSIONS.morning.start)} –{' '}
+                        {formatTime(DELIVERY_SESSIONS.morning.end)} and{' '}
+                        {formatTime(DELIVERY_SESSIONS.afternoon.start)} –{' '}
+                        {formatTime(DELIVERY_SESSIONS.afternoon.end)}
+                      </p>
                     </div>
                   )}
 
