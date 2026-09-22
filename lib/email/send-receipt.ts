@@ -33,9 +33,15 @@ export async function sendOrderReceipt(orderId: string): Promise<void> {
     }
 
     if (row.status !== 'completed') return
-    if (row.receipt_sent_at) return
+    if (row.receipt_sent_at) {
+      console.log(`[receipt] already sent for ${orderId} at ${row.receipt_sent_at} — skipping`)
+      return
+    }
     // POS walk-ins have no email address.
-    if (!row.customer_email) return
+    if (!row.customer_email) {
+      console.log(`[receipt] order ${orderId} has no customer email — skipping`)
+      return
+    }
 
     // Claim the send before doing it.
     const { data: claimed, error: claimError } = await supabase
@@ -49,7 +55,11 @@ export async function sendOrderReceipt(orderId: string): Promise<void> {
       console.error(`[receipt] could not claim order ${orderId}:`, claimError.message)
       return
     }
-    if (!claimed || claimed.length === 0) return // another run already has it
+    if (!claimed || claimed.length === 0) {
+      // Another run already has it — or RLS silently blocked the update.
+      console.warn(`[receipt] could not claim order ${orderId} (already claimed or update blocked)`)
+      return
+    }
 
     const order: ReceiptOrder = {
       id: row.id,
@@ -73,13 +83,21 @@ export async function sendOrderReceipt(orderId: string): Promise<void> {
 
     const { subject, html, text } = renderOrderReceipt(order)
 
-    const { error: sendError } = await resend.emails.send({
-      from: getReceiptFrom(),
-      to: order.customerEmail,
-      subject,
-      html,
-      text,
-    })
+    let sendError: unknown = null
+    try {
+      const result = await resend.emails.send({
+        from: getReceiptFrom(),
+        to: order.customerEmail,
+        subject,
+        html,
+        text,
+      })
+      sendError = result.error
+    } catch (err) {
+      // A thrown send (network drop, timeout) must release the claim too,
+      // otherwise the order looks "already sent" forever.
+      sendError = err
+    }
 
     if (sendError) {
       console.error(`[receipt] send failed for ${orderId}:`, sendError)
