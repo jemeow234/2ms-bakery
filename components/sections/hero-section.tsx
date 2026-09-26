@@ -90,8 +90,8 @@ export function HeroSection() {
             <div className="absolute -inset-6 bg-accent/25 rounded-[2.5rem] rotate-3 hidden sm:block" />
             <div className="relative aspect-[4/5] sm:aspect-square lg:aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
               <Image
-                src="/images/sourdough.jpg"
-                alt="Freshly baked sourdough loaf, dusted with flour, on a wooden board"
+                src="/images/ensaymada.jpg"
+                alt="Freshly baked ensaymada topped with sugar, on a bronze tray"
                 fill
                 priority
                 sizes="(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw"

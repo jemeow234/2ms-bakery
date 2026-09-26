@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { Facebook, Instagram, Twitter } from 'lucide-react'
 import { LogoMark } from '@/components/logo-mark'
 
 const footerLinks = {
@@ -42,30 +41,10 @@ export function Footer() {
               <LogoMark className="w-12 h-12" />
               <span className="text-xl font-bold">2M&apos;s Bakery</span>
             </Link>
-            <p className="text-background/70 mb-6 max-w-sm text-pretty">
-              Handcrafted artisan breads and pastries made with love. 
+            <p className="text-background/70 max-w-sm text-pretty">
+              Handcrafted artisan breads and pastries made with love.
               Fresh from our ovens to your table since 2010.
             </p>
-            <div className="flex gap-4">
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
           </div>
 
           {/* Links */}
@@ -125,9 +104,9 @@ export function Footer() {
             &copy; {new Date().getFullYear()} 2M&apos;s Bakery. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-background/50">
-            <a href="#" className="hover:text-primary transition-colors">
+            <Link href="/privacy" className="hover:text-primary transition-colors">
               Privacy Policy
-            </a>
+            </Link>
             <a href="#" className="hover:text-primary transition-colors">
               Terms of Service
             </a>
