@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -39,6 +39,7 @@ export function ContactSection() {
     email: '',
     message: '',
   })
+  const [isSending, setIsSending] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,10 +59,30 @@ export function ContactSection() {
     return () => observer.disconnect()
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    toast.success('Thank you for your message! We\'ll get back to you soon.')
-    setFormState({ name: '', email: '', message: '' })
+    if (isSending) return
+    setIsSending(true)
+
+    // The hidden honeypot field is read straight from the form; people never fill it.
+    const website = new FormData(e.currentTarget).get('website')
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formState, website }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.')
+
+      toast.success('Thank you for your message! We\'ll get back to you soon.')
+      setFormState({ name: '', email: '', message: '' })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -208,12 +229,30 @@ export function ContactSection() {
                   />
                 </div>
 
+                {/* Honeypot — hidden from people and screen readers, catches bots */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                />
+
                 <Button
                   type="submit"
                   size="lg"
+                  disabled={isSending}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-300 hover:shadow-lg"
                 >
-                  Send Message
+                  {isSending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Message'
+                  )}
                 </Button>
               </div>
             </form>

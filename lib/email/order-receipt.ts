@@ -31,7 +31,7 @@ function peso(amount: number): string {
   return `₱${amount.toFixed(2)}`
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
