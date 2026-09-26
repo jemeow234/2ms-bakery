@@ -28,7 +28,7 @@ import {
   XCircle,
   Truck,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatPaymentMethod } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatSchedule } from '@/lib/delivery'
 
@@ -299,8 +299,8 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Payment</p>
-                  <p className="font-medium text-foreground capitalize">
-                    {selectedOrder.paymentMethod}
+                  <p className="font-medium text-foreground">
+                    {formatPaymentMethod(selectedOrder.paymentMethod)}
                   </p>
                 </div>
                 <div>

@@ -1,4 +1,5 @@
-import { BAKERY_ORIGIN, DeliverySession, formatSchedule } from '@/lib/delivery'
+import { BAKERY_ORIGIN, formatSchedule } from '@/lib/delivery'
+import { formatPaymentMethod } from '@/lib/utils'
 
 export interface ReceiptItem {
   name: string
@@ -15,7 +16,7 @@ export interface ReceiptOrder {
   address?: string | null
   deliveryType: 'delivery' | 'pickup'
   deliveryDate?: string | null
-  deliverySession?: DeliverySession | null
+  deliverySession?: string | null
   distance?: number | null
   paymentMethod: string
   total: number
@@ -129,7 +130,7 @@ export function renderOrderReceipt(order: ReceiptOrder): {
       </tr>
       <tr>
         <td style="color:#888;font-size:13px;">Payment</td>
-        <td style="text-align:right;font-size:13px;color:#333;text-transform:capitalize;">${escapeHtml(order.paymentMethod)}</td>
+        <td style="text-align:right;font-size:13px;color:#333;">${escapeHtml(formatPaymentMethod(order.paymentMethod))}</td>
       </tr>
     </table>
 
@@ -167,7 +168,7 @@ export function renderOrderReceipt(order: ReceiptOrder): {
     ``,
     `Order:   #${number}`,
     `Placed:  ${placedAt}`,
-    `Payment: ${order.paymentMethod}`,
+    `Payment: ${formatPaymentMethod(order.paymentMethod)}`,
     ``,
     `Items`,
     ...order.items.map(

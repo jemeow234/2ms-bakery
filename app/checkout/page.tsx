@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { FeedbackModal } from '@/components/feedback-modal'
 import {
   ArrowLeft,
@@ -19,6 +26,7 @@ import {
   Trash2,
   ShoppingBag,
   CreditCard,
+  Wallet,
   Banknote,
   Loader2,
   CheckCircle2,
@@ -38,6 +46,7 @@ import {
   MINIMUM_ORDER_QUANTITY,
   bakeryTodayISO,
   formatSchedule,
+  formatSession,
   formatTime,
   getSelectableSessions,
 } from '@/lib/delivery'
@@ -70,7 +79,7 @@ export default function CheckoutPage() {
     phone: '',
     address: '',
     deliveryType: 'delivery' as 'delivery' | 'pickup',
-    paymentMethod: 'card' as 'card' | 'cash',
+    paymentMethod: 'gcash' as 'gcash' | 'cash',
   })
 
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuoteState | null>(null)
@@ -181,7 +190,7 @@ export default function CheckoutPage() {
     }
 
     if (!hasSchedule) {
-      toast.error('Please choose a delivery date and session')
+      toast.error('Please choose a delivery date and time')
       return
     }
 
@@ -566,48 +575,38 @@ export default function CheckoutPage() {
                       required
                       className="bg-secondary"
                     />
-                    <RadioGroup
+                    <Select
                       value={deliverySession}
                       onValueChange={(value: DeliverySession) => setDeliverySession(value)}
-                      className="grid sm:grid-cols-2 gap-4 mt-4"
+                      disabled={!deliveryDate || selectableSessions.length === 0}
                     >
-                      {DELIVERY_SESSION_KEYS.map(key => {
-                        const session = DELIVERY_SESSIONS[key]
-                        const disabled = !deliveryDate || !selectableSessions.includes(key)
-                        return (
-                          <label
+                      <SelectTrigger className="w-full mt-4 bg-secondary">
+                        <span className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <SelectValue placeholder="Select a time" />
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DELIVERY_SESSION_KEYS.map(key => (
+                          <SelectItem
                             key={key}
-                            htmlFor={key}
-                            className={cn(
-                              'flex items-center gap-3 p-4 rounded-xl border-2 transition-all',
-                              disabled
-                                ? 'opacity-50 cursor-not-allowed border-border'
-                                : deliverySession === key
-                                  ? 'border-primary bg-primary/5 cursor-pointer'
-                                  : 'border-border hover:border-primary/30 cursor-pointer'
-                            )}
+                            value={key}
+                            disabled={!selectableSessions.includes(key)}
                           >
-                            <RadioGroupItem value={key} id={key} disabled={disabled} />
-                            <Clock className="h-5 w-5 text-primary" />
-                            <div>
-                              <p className="font-medium text-foreground">{session.label}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatTime(session.start)} – {formatTime(session.end)}
-                              </p>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </RadioGroup>
+                            {formatSession(key)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {!deliveryDate && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        Choose a date to see available sessions.
+                        Choose a date to see available times.
                       </p>
                     )}
                     {deliveryDate && selectableSessions.length === 0 && (
                       <p className="text-xs text-destructive mt-2 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        No sessions left on that date. Please pick a later date.
+                        No times left on that date. Please pick a later date.
                       </p>
                     )}
                   </div>
@@ -708,10 +707,8 @@ export default function CheckoutPage() {
                       <p className="text-sm font-medium text-foreground">Pick-up Location</p>
                       <p className="text-sm text-muted-foreground mt-1">{BAKERY_ORIGIN.address}</p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Collection sessions: {formatTime(DELIVERY_SESSIONS.morning.start)} –{' '}
-                        {formatTime(DELIVERY_SESSIONS.morning.end)} and{' '}
-                        {formatTime(DELIVERY_SESSIONS.afternoon.start)} –{' '}
-                        {formatTime(DELIVERY_SESSIONS.afternoon.end)}
+                        Pick-up hours: {formatTime(DELIVERY_SESSIONS[DELIVERY_SESSION_KEYS[0]].start)} –{' '}
+                        {formatTime(DELIVERY_SESSIONS[DELIVERY_SESSION_KEYS[DELIVERY_SESSION_KEYS.length - 1]].end)}
                       </p>
                     </div>
                   )}
@@ -720,24 +717,24 @@ export default function CheckoutPage() {
                     <Label className="mb-3 block">Payment Method</Label>
                     <RadioGroup
                       value={formData.paymentMethod}
-                      onValueChange={(value: 'card' | 'cash') =>
+                      onValueChange={(value: 'gcash' | 'cash') =>
                         setFormData(s => ({ ...s, paymentMethod: value }))
                       }
                       className="grid sm:grid-cols-2 gap-4"
                     >
                       <label
-                        htmlFor="card"
+                        htmlFor="gcash"
                         className={cn(
                           'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                          formData.paymentMethod === 'card'
+                          formData.paymentMethod === 'gcash'
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-primary/30'
                         )}
                       >
-                        <RadioGroupItem value="card" id="card" />
-                        <CreditCard className="h-5 w-5 text-primary" />
+                        <RadioGroupItem value="gcash" id="gcash" />
+                        <Wallet className="h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-medium text-foreground">Card Payment</p>
+                          <p className="font-medium text-foreground">GCash</p>
                           <p className="text-sm text-muted-foreground">{isDelivery ? 'Pay on delivery' : 'Pay on pick-up'}</p>
                         </div>
                       </label>

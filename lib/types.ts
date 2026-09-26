@@ -35,10 +35,10 @@ export interface Order {
   deliveryType: 'delivery' | 'pickup'
   status: 'pending' | 'processing' | 'completed' | 'cancelled'
   createdAt: string
-  paymentMethod: 'cash' | 'card'
+  paymentMethod: 'cash' | 'gcash'
   distance?: number
   deliveryDate?: string
-  deliverySession?: 'morning' | 'afternoon'
+  deliverySession?: string
 }
 
 export interface InventoryLog {

@@ -14,21 +14,35 @@ export const ORDER_LEAD_HOURS = 2
  */
 const BAKERY_UTC_OFFSET_HOURS = 8
 
-export type DeliverySession = 'morning' | 'afternoon'
+/** One-hour slots from 7 AM to 5 PM, keyed by their start time ('07:00'). */
+export const DELIVERY_SESSION_KEYS = [
+  '07:00', '08:00', '09:00', '10:00', '11:00',
+  '12:00', '13:00', '14:00', '15:00', '16:00',
+] as const
 
-export const DELIVERY_SESSIONS = {
-  morning: { key: 'morning', label: 'Morning', start: '08:00', end: '11:00' },
-  afternoon: { key: 'afternoon', label: 'Afternoon', start: '13:00', end: '16:00' },
-} as const
+export type DeliverySession = (typeof DELIVERY_SESSION_KEYS)[number]
 
-export const DELIVERY_SESSION_KEYS = ['morning', 'afternoon'] as const
+export const DELIVERY_SESSIONS = Object.fromEntries(
+  DELIVERY_SESSION_KEYS.map(key => {
+    const end = `${String(Number(key.slice(0, 2)) + 1).padStart(2, '0')}:00`
+    return [key, { key, start: key, end }]
+  })
+) as Record<DeliverySession, { key: DeliverySession; start: string; end: string }>
+
+// Orders placed before hourly slots existed are stored with these keys.
+const LEGACY_SESSIONS: Record<string, { label: string; start: string; end: string }> = {
+  morning: { label: 'Morning', start: '08:00', end: '11:00' },
+  afternoon: { label: 'Afternoon', start: '13:00', end: '16:00' },
+}
 
 // Placeholder coordinates until the real shop location is known — see
 // NEXT_PUBLIC_BAKERY_* in .env.local. Every distance is wrong until these are set.
 export const BAKERY_ORIGIN = {
   lat: Number(process.env.NEXT_PUBLIC_BAKERY_LAT ?? '14.5995'),
   lng: Number(process.env.NEXT_PUBLIC_BAKERY_LNG ?? '120.9842'),
-  address: process.env.NEXT_PUBLIC_BAKERY_ADDRESS ?? "2M's Bakery, Manila, Philippines",
+  address:
+    process.env.NEXT_PUBLIC_BAKERY_ADDRESS ||
+    "2M's Bakery, Zone 3, Brgy, 385 Gov Leviste Hwy, Bulacnin, Lipa City, Batangas",
 }
 
 /** Great-circle distance in km. */
@@ -47,7 +61,7 @@ export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2
 }
 
 export function isDeliverySession(value: unknown): value is DeliverySession {
-  return value === 'morning' || value === 'afternoon'
+  return (DELIVERY_SESSION_KEYS as readonly unknown[]).includes(value)
 }
 
 function isDateString(value: unknown): value is string {
@@ -62,10 +76,14 @@ export function formatTime(hhmm: string): string {
   return `${hour}:${String(mm).padStart(2, '0')} ${suffix}`
 }
 
-/** 'morning' -> 'Morning (8:00 AM – 11:00 AM)' */
-export function formatSession(session: DeliverySession): string {
-  const { label, start, end } = DELIVERY_SESSIONS[session]
-  return `${label} (${formatTime(start)} – ${formatTime(end)})`
+/** '07:00' -> '7:00 AM – 8:00 AM'; legacy 'morning' -> 'Morning (8:00 AM – 11:00 AM)' */
+export function formatSession(session: string): string {
+  if (isDeliverySession(session)) {
+    const { start, end } = DELIVERY_SESSIONS[session]
+    return `${formatTime(start)} – ${formatTime(end)}`
+  }
+  const legacy = LEGACY_SESSIONS[session]
+  return legacy ? `${legacy.label} (${formatTime(legacy.start)} – ${formatTime(legacy.end)})` : session
 }
 
 /** 'YYYY-MM-DD' + session -> the instant that session opens. */
@@ -108,9 +126,9 @@ export function isScheduleValid(
 
 export function formatSchedule(
   dateISO?: string | null,
-  session?: DeliverySession | null
+  session?: string | null
 ): string | null {
-  if (!isDateString(dateISO) || !isDeliverySession(session)) return null
+  if (!isDateString(dateISO) || !session) return null
   const [year, month, day] = dateISO.split('-').map(Number)
   const date = new Date(Date.UTC(year, month - 1, day))
   const label = date.toLocaleDateString('en-PH', {

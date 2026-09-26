@@ -13,17 +13,17 @@ const contactInfo = [
   {
     icon: <MapPin className="h-5 w-5" />,
     title: 'Visit Us',
-    details: ['123 Baker Street', 'Breadville, BK 12345'],
+    details: ['Zone 3, 385 Gov Leviste Hwy', 'Brgy. Bulacnin, Lipa City, Batangas'],
   },
   {
     icon: <Phone className="h-5 w-5" />,
     title: 'Call Us',
-    details: ['(555) 123-4567', '(555) 987-6543'],
+    details: ['+63 917 326 9434'],
   },
   {
     icon: <Mail className="h-5 w-5" />,
     title: 'Email Us',
-    details: ['hello@2msbakery.com', 'orders@2msbakery.com'],
+    details: ['trupazette05@gmail.com'],
   },
   {
     icon: <Clock className="h-5 w-5" />,
@@ -145,7 +145,7 @@ export function ContactSection() {
                 </div>
                 <div>
                   <p className="font-semibold">Find Us In-Store</p>
-                  <p className="text-white/80 text-sm">123 Baker Street, Breadville</p>
+                  <p className="text-white/80 text-sm">385 Gov Leviste Hwy, Bulacnin, Lipa City, Batangas</p>
                 </div>
               </div>
             </div>

@@ -12,7 +12,7 @@ import {
   Plus,
   Minus,
   Trash2,
-  CreditCard,
+  Wallet,
   Banknote,
   CheckCircle2,
   User,
@@ -29,7 +29,7 @@ export default function POSPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [cart, setCart] = useState<CartItem[]>([])
   const [customerName, setCustomerName] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'gcash'>('cash')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
@@ -304,16 +304,16 @@ export default function POSPage() {
               <span className="font-medium">Cash</span>
             </button>
             <button
-              onClick={() => setPaymentMethod('card')}
+              onClick={() => setPaymentMethod('gcash')}
               className={cn(
                 'flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all',
-                paymentMethod === 'card'
+                paymentMethod === 'gcash'
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/30'
               )}
             >
-              <CreditCard className="h-5 w-5" />
-              <span className="font-medium">Card</span>
+              <Wallet className="h-5 w-5" />
+              <span className="font-medium">GCash</span>
             </button>
           </div>
 

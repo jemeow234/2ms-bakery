@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const isWalkIn = status === 'completed'
     if (!isWalkIn && !isScheduleValid(deliveryDate, deliverySession)) {
       return NextResponse.json(
-        { error: 'Please choose a delivery date and session that is still available.' },
+        { error: 'Please choose a delivery date and time that is still available.' },
         { status: 400 }
       )
     }
