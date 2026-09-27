@@ -7,7 +7,7 @@ export const initialProducts: Product[] = [
     description: 'Sugar-glazed bread folded into wings, soft in the middle with lightly crisp edges.',
     price: 5.00,
     category: 'with_palaman',
-    image: '/images/butterfly.jpg',
+    image: '/images/coco_german.jpg',
     featured: true,
     stock: 40,
     ingredients: ['Flour', 'Butter', 'Sugar', 'Yeast', 'Milk', 'Eggs']
@@ -18,7 +18,7 @@ export const initialProducts: Product[] = [
     description: 'Crisp German-style roll with a sweet toasted coconut filling.',
     price: 5.00,
     category: 'with_palaman',
-    image: '/images/coco_german.jpg',
+    image: '/images/butterfly.jpg',
     featured: false,
     stock: 40,
     ingredients: ['Flour', 'Coconut', 'Sugar', 'Butter', 'Yeast']
