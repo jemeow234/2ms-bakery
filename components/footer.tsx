@@ -6,9 +6,8 @@ import { LogoMark } from '@/components/logo-mark'
 const footerLinks = {
   shop: [
     { label: 'All Products', href: '#products', category: 'all' },
-    { label: 'Breads', href: '#products', category: 'bread' },
-    { label: 'Pastries', href: '#products', category: 'pastry' },
-    { label: 'Cakes', href: '#products', category: 'cake' },
+    { label: 'Without Palaman', href: '#products', category: 'without_palaman' },
+    { label: 'With Palaman', href: '#products', category: 'with_palaman' },
   ],
   company: [
     { label: 'About Us', href: '#about' },

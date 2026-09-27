@@ -326,6 +326,32 @@ export default function OrdersPage() {
                 )}
               </div>
 
+              {selectedOrder.paymentMethod === 'gcash' && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Payment screenshot</p>
+                  {selectedOrder.paymentProofUrl ? (
+                    <a
+                      href={selectedOrder.paymentProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-secondary p-2 hover:border-primary/50"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- signed Storage URL */}
+                      <img
+                        src={selectedOrder.paymentProofUrl}
+                        alt={`Payment screenshot for order ${selectedOrder.id}`}
+                        className="mx-auto max-h-72 rounded object-contain"
+                      />
+                      <span className="mt-2 block text-center text-xs text-muted-foreground">
+                        Open full size
+                      </span>
+                    </a>
+                  ) : (
+                    <p className="text-sm font-medium text-foreground">No screenshot uploaded</p>
+                  )}
+                </div>
+              )}
+
               <div>
                 <p className="text-sm text-muted-foreground mb-3">Order Items</p>
                 <div className="space-y-2">

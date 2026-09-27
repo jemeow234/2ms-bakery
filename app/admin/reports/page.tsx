@@ -14,6 +14,7 @@ import {
   Download,
   Printer,
 } from 'lucide-react'
+import { formatCategory } from '@/lib/utils'
 
 type FilterPeriod = 'daily' | 'weekly' | 'monthly'
 
@@ -386,8 +387,8 @@ export default function ReportsPage() {
                         return (
                           <div key={category}>
                             <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-foreground capitalize">
-                                {category}
+                              <span className="font-medium text-foreground">
+                                {formatCategory(category)}
                               </span>
                               <span className="text-muted-foreground text-sm">
                                 {formatCurrency(revenue)} ({percentage.toFixed(1)}%)

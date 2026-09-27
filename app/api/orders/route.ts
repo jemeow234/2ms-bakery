@@ -3,13 +3,26 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { DELIVERY_RANGE_KM, isScheduleValid } from '@/lib/delivery'
 import { quoteDelivery } from '@/lib/geocode'
 import { sendOrderReceipt } from '@/lib/email/send-receipt'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_MAX_BYTES } from '@/lib/payment'
 
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const body = await req.json()
+    // GCash orders arrive as multipart so the payment screenshot can ride along
+    // with the order; everything else (POS, cash) is plain JSON.
+    let body
+    let paymentProof: File | null = null
+    if (req.headers.get('content-type')?.includes('multipart/form-data')) {
+      const form = await req.formData()
+      body = JSON.parse(String(form.get('order') ?? '{}'))
+      const file = form.get('paymentProof')
+      paymentProof = file instanceof File && file.size > 0 ? file : null
+    } else {
+      body = await req.json()
+    }
     const {
       items,
       total,
@@ -64,6 +77,41 @@ export async function POST(req: NextRequest) {
       serverDistance = quote.distanceKm
     }
 
+    // Online GCash/InstaPay orders must show they've paid. Walk-ins pay at the
+    // counter, so the POS never sends one.
+    let paymentProofPath: string | null = null
+    if (paymentMethod === 'gcash' && !isWalkIn) {
+      if (!paymentProof) {
+        return NextResponse.json(
+          { error: 'Please upload a screenshot of your GCash/InstaPay payment.' },
+          { status: 400 }
+        )
+      }
+      if (!paymentProof.type.startsWith('image/')) {
+        return NextResponse.json({ error: 'Payment proof must be an image.' }, { status: 400 })
+      }
+      if (paymentProof.size > PAYMENT_PROOF_MAX_BYTES) {
+        return NextResponse.json(
+          { error: 'Payment screenshot must be smaller than 5MB.' },
+          { status: 400 }
+        )
+      }
+
+      const ext = paymentProof.name.split('.').pop()?.toLowerCase() || 'png'
+      paymentProofPath = `${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await createAdminClient()
+        .storage.from(PAYMENT_PROOF_BUCKET)
+        .upload(paymentProofPath, Buffer.from(await paymentProof.arrayBuffer()), {
+          contentType: paymentProof.type,
+        })
+      if (uploadError) {
+        return NextResponse.json(
+          { error: "We couldn't upload your payment screenshot. Please try again." },
+          { status: 500 }
+        )
+      }
+    }
+
     // Checkout doesn't require an account — user_id is null for guest orders.
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -80,12 +128,19 @@ export async function POST(req: NextRequest) {
         delivery_session: isWalkIn ? null : deliverySession,
         total,
         payment_method: paymentMethod,
+        payment_proof: paymentProofPath,
         status: status || 'pending'
       })
       .select()
       .single()
 
-    if (orderError) throw orderError
+    if (orderError) {
+      // Don't leave an orphaned screenshot behind for an order that never existed.
+      if (paymentProofPath) {
+        await createAdminClient().storage.from(PAYMENT_PROOF_BUCKET).remove([paymentProofPath])
+      }
+      throw orderError
+    }
 
     // Create order items
     const orderItems = items.map((item: any) => ({

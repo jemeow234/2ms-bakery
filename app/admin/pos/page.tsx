@@ -18,10 +18,10 @@ import {
   User,
   ShoppingBag,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, PRODUCT_CATEGORIES } from '@/lib/utils'
 import { toast } from 'sonner'
 
-const categories = ['all', 'bread', 'pastry', 'cake', 'cookie', 'other'] as const
+const categories = [{ id: 'all', label: 'All' }, ...PRODUCT_CATEGORIES]
 
 export default function POSPage() {
   const { products, addOrder } = useStore()
@@ -164,18 +164,18 @@ export default function POSPage() {
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map(category => (
               <Button
-                key={category}
-                variant={activeCategory === category ? 'default' : 'outline'}
+                key={category.id}
+                variant={activeCategory === category.id ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setActiveCategory(category)}
+                onClick={() => setActiveCategory(category.id)}
                 className={cn(
-                  'capitalize whitespace-nowrap',
-                  activeCategory === category
+                  'whitespace-nowrap',
+                  activeCategory === category.id
                     ? 'bg-primary text-primary-foreground'
                     : 'border-border'
                 )}
               >
-                {category}
+                {category.label}
               </Button>
             ))}
           </div>

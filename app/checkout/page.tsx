@@ -36,7 +36,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatCategory } from '@/lib/utils'
 import {
   BAKERY_ORIGIN,
   DELIVERY_RANGE_KM,
@@ -51,6 +51,8 @@ import {
   getSelectableSessions,
 } from '@/lib/delivery'
 import { LogoMark } from '@/components/logo-mark'
+import { PaymentProofDropzone } from '@/components/payment-proof-dropzone'
+import { PAYMENT_QR_IMAGE } from '@/lib/payment'
 
 type QuoteStatus = 'idle' | 'loading' | 'ok' | 'out_of_range' | 'not_found' | 'error'
 
@@ -82,6 +84,7 @@ export default function CheckoutPage() {
     paymentMethod: 'gcash' as 'gcash' | 'cash',
   })
 
+  const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuoteState | null>(null)
   const [quoteStatus, setQuoteStatus] = useState<QuoteStatus>('idle')
   const [deliveryDate, setDeliveryDate] = useState('')
@@ -167,8 +170,12 @@ export default function CheckoutPage() {
   // lands while the blur-triggered check is running all still go through.
   const addressBlocksCheckout =
     isDelivery && (quoteStatus === 'out_of_range' || quoteStatus === 'not_found')
+  const isGcash = formData.paymentMethod === 'gcash'
   const canCheckout =
-    totalQuantity >= MINIMUM_ORDER_QUANTITY && hasSchedule && !addressBlocksCheckout
+    totalQuantity >= MINIMUM_ORDER_QUANTITY &&
+    hasSchedule &&
+    !addressBlocksCheckout &&
+    (!isGcash || paymentProof !== null)
 
   // An address pre-filled from the profile never gets a blur event, so check it
   // as soon as the customer reaches the details step.
@@ -191,6 +198,11 @@ export default function CheckoutPage() {
 
     if (!hasSchedule) {
       toast.error('Please choose a delivery date and time')
+      return
+    }
+
+    if (isGcash && !paymentProof) {
+      toast.error('Please upload a screenshot of your GCash/InstaPay payment')
       return
     }
 
@@ -239,7 +251,7 @@ export default function CheckoutPage() {
         deliverySession: deliverySession as DeliverySession,
         status: 'pending',
         paymentMethod: formData.paymentMethod,
-      })
+      }, isGcash ? paymentProof ?? undefined : undefined)
 
       if (!order) {
         toast.error(error || 'Failed to place order. Please try again.')
@@ -249,6 +261,7 @@ export default function CheckoutPage() {
 
       setOrderNumber(order.id)
       setLastOrder(order)
+      setPaymentProof(null)
       clearCart()
       setStep('success')
       setShowFeedback(true)
@@ -409,7 +422,7 @@ export default function CheckoutPage() {
                         {imageErrors[item.product.id] ? (
                           <div className="w-full h-full flex items-center justify-center">
                             <span className="text-2xl sm:text-3xl">
-                              {item.product.category === 'bread' ? '🍞' : item.product.category === 'pastry' ? '🥐' : '🍰'}
+                              🍞
                             </span>
                           </div>
                         ) : (
@@ -429,8 +442,8 @@ export default function CheckoutPage() {
                             <h3 className="font-semibold text-foreground truncate text-sm sm:text-base">
                               {item.product.name}
                             </h3>
-                            <p className="text-sm text-muted-foreground capitalize">
-                              {item.product.category}
+                            <p className="text-sm text-muted-foreground">
+                              {formatCategory(item.product.category)}
                             </p>
                           </div>
                           <p className="font-serif text-lg font-bold text-primary whitespace-nowrap">
@@ -734,8 +747,8 @@ export default function CheckoutPage() {
                         <RadioGroupItem value="gcash" id="gcash" />
                         <Wallet className="h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-medium text-foreground">GCash</p>
-                          <p className="text-sm text-muted-foreground">{isDelivery ? 'Pay on delivery' : 'Pay on pick-up'}</p>
+                          <p className="font-medium text-foreground">GCash / InstaPay</p>
+                          <p className="text-sm text-muted-foreground">Scan our QR and pay now</p>
                         </div>
                       </label>
                       <label
@@ -755,6 +768,35 @@ export default function CheckoutPage() {
                         </div>
                       </label>
                     </RadioGroup>
+
+                    {isGcash && (
+                      <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-4 sm:p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          <div className="rounded-lg bg-white p-2 shrink-0">
+                            <Image
+                              src={PAYMENT_QR_IMAGE}
+                              alt="2M's Bakery InstaPay QR code"
+                              width={220}
+                              height={223}
+                              className="h-auto w-[220px]"
+                            />
+                          </div>
+                          <ol className="text-sm text-muted-foreground space-y-2 list-decimal pl-5">
+                            <li>Open GCash, Maya, or your bank app and scan this QR.</li>
+                            <li>
+                              Send exactly{' '}
+                              <span className="font-semibold text-foreground">₱{totalPrice.toFixed(2)}</span>.
+                            </li>
+                            <li>Take a screenshot of the successful payment.</li>
+                            <li>Upload it below, then place your order.</li>
+                          </ol>
+                        </div>
+                        <div>
+                          <Label className="mb-2 block">Payment screenshot</Label>
+                          <PaymentProofDropzone file={paymentProof} onChange={setPaymentProof} />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Button

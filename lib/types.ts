@@ -1,9 +1,12 @@
+// "Palaman" is the filling: plain breads versus ones with something inside or on top.
+export type ProductCategory = 'without_palaman' | 'with_palaman'
+
 export interface Product {
   id: string
   name: string
   description: string
   price: number
-  category: 'bread' | 'pastry' | 'cake' | 'cookie' | 'other'
+  category: ProductCategory
   image: string
   featured: boolean
   stock: number
@@ -39,6 +42,8 @@ export interface Order {
   distance?: number
   deliveryDate?: string
   deliverySession?: string
+  // Signed URL of the customer's GCash/InstaPay screenshot; admin reads only.
+  paymentProofUrl?: string
 }
 
 export interface InventoryLog {

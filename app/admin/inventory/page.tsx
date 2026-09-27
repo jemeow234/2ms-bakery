@@ -34,7 +34,7 @@ import {
   ImagePlus,
   X,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCategory, PRODUCT_CATEGORIES } from '@/lib/utils'
 import { toast } from 'sonner'
 
 export default function InventoryPage() {
@@ -52,7 +52,7 @@ export default function InventoryPage() {
     name: '',
     description: '',
     price: '',
-    category: 'bread' as Product['category'],
+    category: 'with_palaman' as Product['category'],
     stock: '',
     featured: false,
   })
@@ -177,7 +177,7 @@ export default function InventoryPage() {
       name: '',
       description: '',
       price: '',
-      category: 'bread',
+      category: 'with_palaman',
       stock: '',
       featured: false,
     })
@@ -336,11 +336,9 @@ export default function InventoryPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bread">Bread</SelectItem>
-                    <SelectItem value="pastry">Pastry</SelectItem>
-                    <SelectItem value="cake">Cake</SelectItem>
-                    <SelectItem value="cookie">Cookie</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {PRODUCT_CATEGORIES.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -480,7 +478,7 @@ export default function InventoryPage() {
                     </div>
                   </td>
                   <td className="py-4 px-6">
-                    <span className="capitalize text-muted-foreground">{product.category}</span>
+                    <span className="text-muted-foreground">{formatCategory(product.category)}</span>
                   </td>
                   <td className="py-4 px-6">
                     <span className="font-medium text-foreground">₱{product.price.toFixed(2)}</span>
@@ -634,11 +632,9 @@ export default function InventoryPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bread">Bread</SelectItem>
-                      <SelectItem value="pastry">Pastry</SelectItem>
-                      <SelectItem value="cake">Cake</SelectItem>
-                      <SelectItem value="cookie">Cookie</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {PRODUCT_CATEGORIES.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
