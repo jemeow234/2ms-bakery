@@ -181,7 +181,7 @@ export const initialProducts: Product[] = [
     id: '17',
     name: 'Regular Pandesal',
     description: 'The everyday Filipino breakfast roll — soft, lightly sweet, and rolled in fine breadcrumbs.',
-    price: 5.00,
+    price: 2.00,
     category: 'without_palaman',
     image: '/images/pandesal-final.jpg',
     featured: true,
