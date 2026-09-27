@@ -45,6 +45,12 @@ export const BAKERY_ORIGIN = {
     "2M's Bakery, Zone 3, Brgy, 385 Gov Leviste Hwy, Bulacnin, Lipa City, Batangas",
 }
 
+/** Opens the shop's pinned location in Google Maps (app on phones, site on desktop). */
+export const BAKERY_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${BAKERY_ORIGIN.lat},${BAKERY_ORIGIN.lng}`
+
+/** Keyless Google Maps embed centred on the shop, for the contact section. */
+export const BAKERY_MAP_EMBED_URL = `https://maps.google.com/maps?q=${BAKERY_ORIGIN.lat},${BAKERY_ORIGIN.lng}&z=17&output=embed`
+
 /** Great-circle distance in km. */
 export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371 // Earth's radius in km
