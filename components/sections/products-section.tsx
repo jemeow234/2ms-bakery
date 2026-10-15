@@ -4,15 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { ProductCard } from '@/components/product-card'
 import { useStore } from '@/context/store-context'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, PRODUCT_CATEGORIES } from '@/lib/utils'
 
-const categories = [
-  { id: 'all', label: 'All Products' },
-  { id: 'bread', label: 'Breads' },
-  { id: 'pastry', label: 'Pastries' },
-  { id: 'cake', label: 'Cakes' },
-  { id: 'cookie', label: 'Cookies' },
-]
+const categories = [{ id: 'all', label: 'All Products' }, ...PRODUCT_CATEGORIES]
 
 const PAGE_SIZE = 8
 

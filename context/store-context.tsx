@@ -16,7 +16,10 @@ interface StoreContextType {
   addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>
   deleteProduct: (id: string) => Promise<void>
   updateStock: (productId: string, quantity: number, type: InventoryLog['type'], note?: string) => Promise<boolean>
-  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<{ order: Order | null; error?: string }>
+  addOrder: (
+    order: Omit<Order, 'id' | 'createdAt'>,
+    paymentProof?: File
+  ) => Promise<{ order: Order | null; error?: string }>
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
   deleteAnnouncement: (id: string) => Promise<boolean>
@@ -205,14 +208,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const addOrder = async (
-    orderData: Omit<Order, 'id' | 'createdAt'>
+    orderData: Omit<Order, 'id' | 'createdAt'>,
+    paymentProof?: File
   ): Promise<{ order: Order | null; error?: string }> => {
     try {
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      })
+      let res: Response
+      if (paymentProof) {
+        // Multipart so the screenshot travels with the order in one request;
+        // the browser sets the boundary header itself.
+        const form = new FormData()
+        form.append('order', JSON.stringify(orderData))
+        form.append('paymentProof', paymentProof)
+        res = await fetch('/api/orders', { method: 'POST', body: form })
+      } else {
+        res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        })
+      }
       if (res.ok) {
         const data = await res.json()
         setOrders(prev => [data.order, ...prev])

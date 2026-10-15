@@ -1,29 +1,30 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BAKERY_MAP_EMBED_URL, BAKERY_MAP_URL } from '@/lib/delivery'
 import { toast } from 'sonner'
 
-const contactInfo = [
+const contactInfo: { icon: React.ReactNode; title: string; details: string[]; href?: string }[] = [
   {
     icon: <MapPin className="h-5 w-5" />,
     title: 'Visit Us',
-    details: ['123 Baker Street', 'Breadville, BK 12345'],
+    href: BAKERY_MAP_URL,
+    details: ['Zone 3, 385 Gov Leviste Hwy', 'Brgy. Bulacnin, Lipa City, Batangas'],
   },
   {
     icon: <Phone className="h-5 w-5" />,
     title: 'Call Us',
-    details: ['(555) 123-4567', '(555) 987-6543'],
+    details: ['+63 917 326 9434'],
   },
   {
     icon: <Mail className="h-5 w-5" />,
     title: 'Email Us',
-    details: ['hello@2msbakery.com', 'orders@2msbakery.com'],
+    details: ['trupazette05@gmail.com'],
   },
   {
     icon: <Clock className="h-5 w-5" />,
@@ -39,6 +40,7 @@ export function ContactSection() {
     email: '',
     message: '',
   })
+  const [isSending, setIsSending] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,10 +60,30 @@ export function ContactSection() {
     return () => observer.disconnect()
   }, [])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    toast.success('Thank you for your message! We\'ll get back to you soon.')
-    setFormState({ name: '', email: '', message: '' })
+    if (isSending) return
+    setIsSending(true)
+
+    // The hidden honeypot field is read straight from the form; people never fill it.
+    const website = new FormData(e.currentTarget).get('website')
+
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formState, website }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.')
+
+      toast.success('Thank you for your message! We\'ll get back to you soon.')
+      setFormState({ name: '', email: '', message: '' })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -114,9 +136,22 @@ export function ContactSection() {
                   className="p-6 bg-background rounded-2xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
                   style={{ transitionDelay: `${400 + index * 100}ms` }}
                 >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
-                    {info.icon}
-                  </div>
+                  {info.href ? (
+                    <a
+                      href={info.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Open 2M's Bakery in Google Maps"
+                      title="Open in Google Maps"
+                      className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4 transition-colors hover:bg-primary hover:text-primary-foreground"
+                    >
+                      {info.icon}
+                    </a>
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+                      {info.icon}
+                    </div>
+                  )}
                   <h3 className="font-semibold text-foreground mb-2">
                     {info.title}
                   </h3>
@@ -130,22 +165,30 @@ export function ContactSection() {
             </div>
 
             {/* Visit Us panel */}
-            <div className="relative h-64 rounded-2xl overflow-hidden">
-              <Image
-                src="/images/whole-wheat.jpg"
-                alt="Inside 2M's Bakery"
-                fill
-                sizes="(min-width: 1024px) 45vw, 90vw"
-                className="object-cover"
+            <div className="relative h-64 rounded-2xl overflow-hidden bg-secondary">
+              <iframe
+                src={BAKERY_MAP_EMBED_URL}
+                title="Map showing 2M's Bakery in Bulacnin, Lipa City"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="absolute inset-0 h-full w-full border-0"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              {/* Only shades the bottom strip, and lets clicks through so the map stays draggable. */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-6 text-white flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center shrink-0">
+                <a
+                  href={BAKERY_MAP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open 2M's Bakery in Google Maps"
+                  title="Open in Google Maps"
+                  className="w-10 h-10 rounded-full bg-primary/90 flex items-center justify-center shrink-0 transition-transform hover:scale-110 hover:bg-primary"
+                >
                   <MapPin className="h-5 w-5" />
-                </div>
+                </a>
                 <div>
                   <p className="font-semibold">Find Us In-Store</p>
-                  <p className="text-white/80 text-sm">123 Baker Street, Breadville</p>
+                  <p className="text-white/80 text-sm">385 Gov Leviste Hwy, Bulacnin, Lipa City, Batangas</p>
                 </div>
               </div>
             </div>
@@ -208,12 +251,30 @@ export function ContactSection() {
                   />
                 </div>
 
+                {/* Honeypot — hidden from people and screen readers, catches bots */}
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  className="absolute -left-[9999px] h-0 w-0 opacity-0"
+                />
+
                 <Button
                   type="submit"
                   size="lg"
+                  disabled={isSending}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-300 hover:shadow-lg"
                 >
-                  Send Message
+                  {isSending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Message'
+                  )}
                 </Button>
               </div>
             </form>

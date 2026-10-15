@@ -164,6 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         password: data.password,
         options: {
+          // Without this, the confirmation link points at the project's
+          // dashboard Site URL instead of the site the user signed up on.
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             name: data.name,
             phone: data.phone,

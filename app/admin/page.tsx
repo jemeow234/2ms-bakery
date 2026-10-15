@@ -10,6 +10,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import Link from 'next/link'
+import { formatCategory } from '@/lib/utils'
 
 export default function AdminDashboard() {
   const { products, adminOrders: orders, inventoryLogs } = useStore()
@@ -101,7 +102,7 @@ export default function AdminDashboard() {
                   >
                     <div>
                       <p className="font-medium text-foreground">{product.name}</p>
-                      <p className="text-sm text-muted-foreground capitalize">{product.category}</p>
+                      <p className="text-sm text-muted-foreground ">{formatCategory(product.category)}</p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       product.stock === 0

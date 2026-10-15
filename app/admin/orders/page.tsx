@@ -28,7 +28,7 @@ import {
   XCircle,
   Truck,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatPaymentMethod } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatSchedule } from '@/lib/delivery'
 
@@ -299,8 +299,8 @@ export default function OrdersPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Payment</p>
-                  <p className="font-medium text-foreground capitalize">
-                    {selectedOrder.paymentMethod}
+                  <p className="font-medium text-foreground">
+                    {formatPaymentMethod(selectedOrder.paymentMethod)}
                   </p>
                 </div>
                 <div>
@@ -325,6 +325,32 @@ export default function OrdersPage() {
                   </div>
                 )}
               </div>
+
+              {selectedOrder.paymentMethod === 'gcash' && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Payment screenshot</p>
+                  {selectedOrder.paymentProofUrl ? (
+                    <a
+                      href={selectedOrder.paymentProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-secondary p-2 hover:border-primary/50"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- signed Storage URL */}
+                      <img
+                        src={selectedOrder.paymentProofUrl}
+                        alt={`Payment screenshot for order ${selectedOrder.id}`}
+                        className="mx-auto max-h-72 rounded object-contain"
+                      />
+                      <span className="mt-2 block text-center text-xs text-muted-foreground">
+                        Open full size
+                      </span>
+                    </a>
+                  ) : (
+                    <p className="text-sm font-medium text-foreground">No screenshot uploaded</p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <p className="text-sm text-muted-foreground mb-3">Order Items</p>

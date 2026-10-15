@@ -6,7 +6,7 @@ import { Product } from '@/lib/types'
 import { useCart } from '@/context/cart-context'
 import { Button } from '@/components/ui/button'
 import { Plus, Minus, ShoppingBag, Check } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatCategory } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface ProductCardProps {
@@ -102,7 +102,7 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
 
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 text-white">
           <span className="text-xs uppercase tracking-wider text-white/70 font-medium">
-            {product.category}
+            {formatCategory(product.category)}
           </span>
           <h3 className="font-serif text-3xl sm:text-4xl font-bold mb-2 mt-1">
             {product.name}
@@ -195,7 +195,7 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
       <div className="p-6">
         <div className="flex items-start justify-between mb-2">
           <span className="text-xs uppercase tracking-wider text-primary font-medium">
-            {product.category}
+            {formatCategory(product.category)}
           </span>
           <span className="font-serif text-xl font-bold text-primary">
             ₱{product.price.toFixed(2)}

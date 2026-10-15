@@ -12,16 +12,16 @@ import {
   Plus,
   Minus,
   Trash2,
-  CreditCard,
+  Wallet,
   Banknote,
   CheckCircle2,
   User,
   ShoppingBag,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, PRODUCT_CATEGORIES } from '@/lib/utils'
 import { toast } from 'sonner'
 
-const categories = ['all', 'bread', 'pastry', 'cake', 'cookie', 'other'] as const
+const categories = [{ id: 'all', label: 'All' }, ...PRODUCT_CATEGORIES]
 
 export default function POSPage() {
   const { products, addOrder } = useStore()
@@ -29,7 +29,7 @@ export default function POSPage() {
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [cart, setCart] = useState<CartItem[]>([])
   const [customerName, setCustomerName] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'gcash'>('cash')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
@@ -164,18 +164,18 @@ export default function POSPage() {
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map(category => (
               <Button
-                key={category}
-                variant={activeCategory === category ? 'default' : 'outline'}
+                key={category.id}
+                variant={activeCategory === category.id ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setActiveCategory(category)}
+                onClick={() => setActiveCategory(category.id)}
                 className={cn(
-                  'capitalize whitespace-nowrap',
-                  activeCategory === category
+                  'whitespace-nowrap',
+                  activeCategory === category.id
                     ? 'bg-primary text-primary-foreground'
                     : 'border-border'
                 )}
               >
-                {category}
+                {category.label}
               </Button>
             ))}
           </div>
@@ -304,16 +304,16 @@ export default function POSPage() {
               <span className="font-medium">Cash</span>
             </button>
             <button
-              onClick={() => setPaymentMethod('card')}
+              onClick={() => setPaymentMethod('gcash')}
               className={cn(
                 'flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all',
-                paymentMethod === 'card'
+                paymentMethod === 'gcash'
                   ? 'border-primary bg-primary/5'
                   : 'border-border hover:border-primary/30'
               )}
             >
-              <CreditCard className="h-5 w-5" />
-              <span className="font-medium">Card</span>
+              <Wallet className="h-5 w-5" />
+              <span className="font-medium">GCash</span>
             </button>
           </div>
 

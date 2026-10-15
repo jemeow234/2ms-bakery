@@ -8,6 +8,7 @@ import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -33,6 +34,7 @@ export default function LoginPage() {
     password: '',
     confirmPassword: ''
   })
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
 
   const { login, register } = useAuth()
   const router = useRouter()
@@ -64,6 +66,11 @@ export default function LoginPage() {
 
     if (registerData.password.length < 6) {
       toast.error('Password must be at least 6 characters')
+      return
+    }
+
+    if (!acceptedPrivacy) {
+      toast.error('Please agree to the Privacy Policy to create an account')
       return
     }
 
@@ -320,9 +327,32 @@ export default function LoginPage() {
                 />
               </div>
 
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="register-privacy"
+                  checked={acceptedPrivacy}
+                  onCheckedChange={checked => setAcceptedPrivacy(checked === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="register-privacy" className="text-sm font-normal text-muted-foreground leading-snug">
+                  <span>
+                    I have read and agree to the{' '}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    , and consent to 2M&apos;s Bakery processing my personal information as described there.
+                  </span>
+                </Label>
+              </div>
+
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !acceptedPrivacy}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium mt-2"
               >
                 {isLoading ? (
@@ -334,10 +364,6 @@ export default function LoginPage() {
                   'Create Account'
                 )}
               </Button>
-
-              <p className="text-center text-sm text-muted-foreground mt-4">
-                By registering, you agree to our Terms of Service and Privacy Policy.
-              </p>
             </form>
           )}
         </div>

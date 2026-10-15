@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { FeedbackModal } from '@/components/feedback-modal'
 import {
   ArrowLeft,
@@ -19,6 +26,7 @@ import {
   Trash2,
   ShoppingBag,
   CreditCard,
+  Wallet,
   Banknote,
   Loader2,
   CheckCircle2,
@@ -28,7 +36,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatCategory } from '@/lib/utils'
 import {
   BAKERY_ORIGIN,
   DELIVERY_RANGE_KM,
@@ -38,10 +46,13 @@ import {
   MINIMUM_ORDER_QUANTITY,
   bakeryTodayISO,
   formatSchedule,
+  formatSession,
   formatTime,
   getSelectableSessions,
 } from '@/lib/delivery'
 import { LogoMark } from '@/components/logo-mark'
+import { PaymentProofDropzone } from '@/components/payment-proof-dropzone'
+import { PAYMENT_QR_IMAGE } from '@/lib/payment'
 
 type QuoteStatus = 'idle' | 'loading' | 'ok' | 'out_of_range' | 'not_found' | 'error'
 
@@ -70,9 +81,10 @@ export default function CheckoutPage() {
     phone: '',
     address: '',
     deliveryType: 'delivery' as 'delivery' | 'pickup',
-    paymentMethod: 'card' as 'card' | 'cash',
+    paymentMethod: 'gcash' as 'gcash' | 'cash',
   })
 
+  const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuoteState | null>(null)
   const [quoteStatus, setQuoteStatus] = useState<QuoteStatus>('idle')
   const [deliveryDate, setDeliveryDate] = useState('')
@@ -158,8 +170,12 @@ export default function CheckoutPage() {
   // lands while the blur-triggered check is running all still go through.
   const addressBlocksCheckout =
     isDelivery && (quoteStatus === 'out_of_range' || quoteStatus === 'not_found')
+  const isGcash = formData.paymentMethod === 'gcash'
   const canCheckout =
-    totalQuantity >= MINIMUM_ORDER_QUANTITY && hasSchedule && !addressBlocksCheckout
+    totalQuantity >= MINIMUM_ORDER_QUANTITY &&
+    hasSchedule &&
+    !addressBlocksCheckout &&
+    (!isGcash || paymentProof !== null)
 
   // An address pre-filled from the profile never gets a blur event, so check it
   // as soon as the customer reaches the details step.
@@ -181,7 +197,12 @@ export default function CheckoutPage() {
     }
 
     if (!hasSchedule) {
-      toast.error('Please choose a delivery date and session')
+      toast.error('Please choose a delivery date and time')
+      return
+    }
+
+    if (isGcash && !paymentProof) {
+      toast.error('Please upload a screenshot of your GCash/InstaPay payment')
       return
     }
 
@@ -230,7 +251,7 @@ export default function CheckoutPage() {
         deliverySession: deliverySession as DeliverySession,
         status: 'pending',
         paymentMethod: formData.paymentMethod,
-      })
+      }, isGcash ? paymentProof ?? undefined : undefined)
 
       if (!order) {
         toast.error(error || 'Failed to place order. Please try again.')
@@ -240,6 +261,7 @@ export default function CheckoutPage() {
 
       setOrderNumber(order.id)
       setLastOrder(order)
+      setPaymentProof(null)
       clearCart()
       setStep('success')
       setShowFeedback(true)
@@ -400,7 +422,7 @@ export default function CheckoutPage() {
                         {imageErrors[item.product.id] ? (
                           <div className="w-full h-full flex items-center justify-center">
                             <span className="text-2xl sm:text-3xl">
-                              {item.product.category === 'bread' ? '🍞' : item.product.category === 'pastry' ? '🥐' : '🍰'}
+                              🍞
                             </span>
                           </div>
                         ) : (
@@ -420,8 +442,8 @@ export default function CheckoutPage() {
                             <h3 className="font-semibold text-foreground truncate text-sm sm:text-base">
                               {item.product.name}
                             </h3>
-                            <p className="text-sm text-muted-foreground capitalize">
-                              {item.product.category}
+                            <p className="text-sm text-muted-foreground">
+                              {formatCategory(item.product.category)}
                             </p>
                           </div>
                           <p className="font-serif text-lg font-bold text-primary whitespace-nowrap">
@@ -566,48 +588,38 @@ export default function CheckoutPage() {
                       required
                       className="bg-secondary"
                     />
-                    <RadioGroup
+                    <Select
                       value={deliverySession}
                       onValueChange={(value: DeliverySession) => setDeliverySession(value)}
-                      className="grid sm:grid-cols-2 gap-4 mt-4"
+                      disabled={!deliveryDate || selectableSessions.length === 0}
                     >
-                      {DELIVERY_SESSION_KEYS.map(key => {
-                        const session = DELIVERY_SESSIONS[key]
-                        const disabled = !deliveryDate || !selectableSessions.includes(key)
-                        return (
-                          <label
+                      <SelectTrigger className="w-full mt-4 bg-secondary">
+                        <span className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <SelectValue placeholder="Select a time" />
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DELIVERY_SESSION_KEYS.map(key => (
+                          <SelectItem
                             key={key}
-                            htmlFor={key}
-                            className={cn(
-                              'flex items-center gap-3 p-4 rounded-xl border-2 transition-all',
-                              disabled
-                                ? 'opacity-50 cursor-not-allowed border-border'
-                                : deliverySession === key
-                                  ? 'border-primary bg-primary/5 cursor-pointer'
-                                  : 'border-border hover:border-primary/30 cursor-pointer'
-                            )}
+                            value={key}
+                            disabled={!selectableSessions.includes(key)}
                           >
-                            <RadioGroupItem value={key} id={key} disabled={disabled} />
-                            <Clock className="h-5 w-5 text-primary" />
-                            <div>
-                              <p className="font-medium text-foreground">{session.label}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatTime(session.start)} – {formatTime(session.end)}
-                              </p>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </RadioGroup>
+                            {formatSession(key)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {!deliveryDate && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        Choose a date to see available sessions.
+                        Choose a date to see available times.
                       </p>
                     )}
                     {deliveryDate && selectableSessions.length === 0 && (
                       <p className="text-xs text-destructive mt-2 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        No sessions left on that date. Please pick a later date.
+                        No times left on that date. Please pick a later date.
                       </p>
                     )}
                   </div>
@@ -708,10 +720,8 @@ export default function CheckoutPage() {
                       <p className="text-sm font-medium text-foreground">Pick-up Location</p>
                       <p className="text-sm text-muted-foreground mt-1">{BAKERY_ORIGIN.address}</p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Collection sessions: {formatTime(DELIVERY_SESSIONS.morning.start)} –{' '}
-                        {formatTime(DELIVERY_SESSIONS.morning.end)} and{' '}
-                        {formatTime(DELIVERY_SESSIONS.afternoon.start)} –{' '}
-                        {formatTime(DELIVERY_SESSIONS.afternoon.end)}
+                        Pick-up hours: {formatTime(DELIVERY_SESSIONS[DELIVERY_SESSION_KEYS[0]].start)} –{' '}
+                        {formatTime(DELIVERY_SESSIONS[DELIVERY_SESSION_KEYS[DELIVERY_SESSION_KEYS.length - 1]].end)}
                       </p>
                     </div>
                   )}
@@ -720,25 +730,25 @@ export default function CheckoutPage() {
                     <Label className="mb-3 block">Payment Method</Label>
                     <RadioGroup
                       value={formData.paymentMethod}
-                      onValueChange={(value: 'card' | 'cash') =>
+                      onValueChange={(value: 'gcash' | 'cash') =>
                         setFormData(s => ({ ...s, paymentMethod: value }))
                       }
                       className="grid sm:grid-cols-2 gap-4"
                     >
                       <label
-                        htmlFor="card"
+                        htmlFor="gcash"
                         className={cn(
                           'flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
-                          formData.paymentMethod === 'card'
+                          formData.paymentMethod === 'gcash'
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-primary/30'
                         )}
                       >
-                        <RadioGroupItem value="card" id="card" />
-                        <CreditCard className="h-5 w-5 text-primary" />
+                        <RadioGroupItem value="gcash" id="gcash" />
+                        <Wallet className="h-5 w-5 text-primary" />
                         <div>
-                          <p className="font-medium text-foreground">Card Payment</p>
-                          <p className="text-sm text-muted-foreground">{isDelivery ? 'Pay on delivery' : 'Pay on pick-up'}</p>
+                          <p className="font-medium text-foreground">GCash / InstaPay</p>
+                          <p className="text-sm text-muted-foreground">Scan our QR and pay now</p>
                         </div>
                       </label>
                       <label
@@ -758,6 +768,35 @@ export default function CheckoutPage() {
                         </div>
                       </label>
                     </RadioGroup>
+
+                    {isGcash && (
+                      <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-4 sm:p-5 space-y-4">
+                        <div className="flex flex-col sm:flex-row items-center gap-4">
+                          <div className="rounded-lg bg-white p-2 shrink-0">
+                            <Image
+                              src={PAYMENT_QR_IMAGE}
+                              alt="2M's Bakery InstaPay QR code"
+                              width={220}
+                              height={223}
+                              className="h-auto w-[220px]"
+                            />
+                          </div>
+                          <ol className="text-sm text-muted-foreground space-y-2 list-decimal pl-5">
+                            <li>Open GCash, Maya, or your bank app and scan this QR.</li>
+                            <li>
+                              Send exactly{' '}
+                              <span className="font-semibold text-foreground">₱{totalPrice.toFixed(2)}</span>.
+                            </li>
+                            <li>Take a screenshot of the successful payment.</li>
+                            <li>Upload it below, then place your order.</li>
+                          </ol>
+                        </div>
+                        <div>
+                          <Label className="mb-2 block">Payment screenshot</Label>
+                          <PaymentProofDropzone file={paymentProof} onChange={setPaymentProof} />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Button
