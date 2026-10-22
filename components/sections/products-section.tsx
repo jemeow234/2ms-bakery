@@ -5,6 +5,7 @@ import { ProductCard } from '@/components/product-card'
 import { useStore } from '@/context/store-context'
 import { Button } from '@/components/ui/button'
 import { cn, PRODUCT_CATEGORIES } from '@/lib/utils'
+import { groupProductVariants } from '@/lib/product-variants'
 
 const categories = [{ id: 'all', label: 'All Products' }, ...PRODUCT_CATEGORIES]
 
@@ -17,9 +18,11 @@ export function ProductsSection() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const { products } = useStore()
 
-  const filteredProducts = activeCategory === 'all'
-    ? products
-    : products.filter(p => p.category === activeCategory)
+  const filteredProducts = groupProductVariants(
+    activeCategory === 'all'
+      ? products
+      : products.filter(p => p.category === activeCategory)
+  )
 
   const visibleProducts = filteredProducts.slice(0, visibleCount)
   const hasMore = visibleCount < filteredProducts.length
@@ -111,16 +114,16 @@ export function ProductsSection() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {visibleProducts.map((product, index) => (
+          {visibleProducts.map(({ key, product, variants }, index) => (
             <div
-              key={product.id}
+              key={key}
               className={cn(
                 'transition-all duration-500',
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               )}
               style={{ transitionDelay: `${400 + (index % 8) * 100}ms` }}
             >
-              <ProductCard product={product} />
+              <ProductCard product={product} options={variants} />
             </div>
           ))}
         </div>

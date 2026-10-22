@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import { ProductCard } from '@/components/product-card'
 import { useStore } from '@/context/store-context'
 import { cn } from '@/lib/utils'
+import { groupProductVariants } from '@/lib/product-variants'
 
 export function FeaturedSection() {
   const [isVisible, setIsVisible] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
   const { products } = useStore()
 
-  const featuredProducts = products.filter(p => p.featured)
+  const featuredProducts = groupProductVariants(products).filter(l => l.product.featured)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -69,21 +70,25 @@ export function FeaturedSection() {
               )}
               style={{ transitionDelay: '300ms' }}
             >
-              <ProductCard product={featuredProducts[0]} variant="spotlight" />
+              <ProductCard
+                product={featuredProducts[0].product}
+                options={featuredProducts[0].variants}
+                variant="spotlight"
+              />
             </div>
           )}
 
           <div className="lg:col-span-2 flex flex-col gap-4 lg:h-full lg:justify-between">
-            {featuredProducts.slice(1).map((product, index) => (
+            {featuredProducts.slice(1).map(({ key, product, variants }, index) => (
               <div
-                key={product.id}
+                key={key}
                 className={cn(
                   'transition-all duration-700',
                   isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 )}
                 style={{ transitionDelay: `${450 + index * 150}ms` }}
               >
-                <ProductCard product={product} variant="compact" />
+                <ProductCard product={product} options={variants} variant="compact" />
               </div>
             ))}
           </div>
