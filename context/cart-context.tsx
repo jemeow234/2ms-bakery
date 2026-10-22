@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Product, CartItem } from '@/lib/types'
+import { useStore } from './store-context'
 
 interface CartContextType {
   items: CartItem[]
@@ -15,26 +16,51 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
+// A cart saved by an older version of the site, edited by hand or cut short
+// must not take the whole page down — anything unreadable is dropped.
+function readSavedCart(): CartItem[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem('bakery-cart') ?? '[]')
+    if (!Array.isArray(saved)) return []
+    return saved.filter(
+      (item): item is CartItem =>
+        typeof item?.product?.id === 'string' &&
+        typeof item.product.price === 'number' &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0
+    )
+  } catch {
+    return []
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+  const { products } = useStore()
+  const [savedItems, setItems] = useState<CartItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
+
+  // The saved cart holds a snapshot of each product from when it was added.
+  // Show the live catalog's price and stock instead, so the total the customer
+  // sees is the one the server will charge.
+  const liveProducts = new Map(products.map(p => [p.id, p]))
+  const items = savedItems.map(item => {
+    const live = liveProducts.get(item.product.id)
+    return live ? { ...item, product: live } : item
+  })
 
   useEffect(() => {
     // localStorage isn't available during SSR, so the cart must be loaded
     // in an effect rather than during render.
-    const savedCart = localStorage.getItem('bakery-cart')
-    if (savedCart) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setItems(JSON.parse(savedCart))
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setItems(readSavedCart())
     setIsLoaded(true)
   }, [])
 
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('bakery-cart', JSON.stringify(items))
+      localStorage.setItem('bakery-cart', JSON.stringify(savedItems))
     }
-  }, [items, isLoaded])
+  }, [savedItems, isLoaded])
 
   const addToCart = (product: Product, quantity: number = 1) => {
     setItems(prev => {

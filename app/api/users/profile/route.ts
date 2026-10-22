@@ -1,5 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { serverError } from '@/lib/api'
+
+// Email belongs to Supabase Auth and the role to admins; neither is set here.
+const profileSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  phone: z.string().trim().max(30).nullable().optional(),
+  address: z.string().trim().max(500).nullable().optional(),
+})
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,11 +19,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { email, name, phone, address } = await req.json()
+    const parsed = profileSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Please check your name, phone and address.' }, { status: 400 })
+    }
 
     const { data, error } = await supabase
       .from('users')
-      .update({ name, phone, address })
+      .update(parsed.data)
       .eq('id', user.id)
       .select()
       .single()
@@ -22,12 +34,12 @@ export async function POST(req: NextRequest) {
     if (error) throw error
 
     return NextResponse.json(data)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('users/profile', error, "Couldn't save your profile.")
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -45,7 +57,7 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     return NextResponse.json(data)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('users/profile', error, "Couldn't load your profile.")
   }
 }

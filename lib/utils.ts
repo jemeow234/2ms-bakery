@@ -24,3 +24,8 @@ export const PRODUCT_CATEGORIES: { id: ProductCategory; label: string }[] = [
 export function formatCategory(category: string): string {
   return PRODUCT_CATEGORIES.find(c => c.id === category)?.label ?? category
 }
+
+// New passwords only — existing accounts with shorter passwords can still sign
+// in. Match it in Supabase: Authentication > Providers > Email > Minimum
+// password length (and supabase/config.toml for local runs).
+export const MIN_PASSWORD_LENGTH = 8

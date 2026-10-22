@@ -200,6 +200,7 @@ export default function POSPage() {
                       src={product.image}
                       alt={product.name}
                       fill
+                      sizes="(min-width: 1024px) 15vw, (min-width: 640px) 25vw, 50vw"
                       className="object-cover group-hover:scale-105 transition-transform"
                       onError={() => handleImageError(product.id)}
                     />
@@ -264,20 +265,20 @@ export default function POSPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
+                    <button aria-label={`Remove one ${item.product.name}`}
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                       className="p-1 hover:bg-card rounded transition-colors"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
                     <span className="w-8 text-center font-medium">{item.quantity}</span>
-                    <button
+                    <button aria-label={`Add one ${item.product.name}`}
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                       className="p-1 hover:bg-card rounded transition-colors"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
-                    <button
+                    <button aria-label={`Remove ${item.product.name} from the sale`}
                       onClick={() => removeFromCart(item.product.id)}
                       className="p-1 hover:bg-destructive/10 text-destructive rounded transition-colors ml-2"
                     >

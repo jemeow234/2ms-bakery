@@ -7,9 +7,8 @@ import { useCart } from '@/context/cart-context'
 import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { NotificationCenter } from '@/components/notification-center'
-import { Menu, ShoppingBag, User, LogOut } from 'lucide-react'
+import { ClipboardList, Menu, ShoppingBag, User, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -108,49 +107,53 @@ export function Navbar() {
             Order Now
           </Button>
 
-          <Link href="/checkout">
-            <Button variant="ghost" size="icon" className="relative">
+          <Button asChild variant="ghost" size="icon" className="relative">
+            <Link
+              href="/checkout"
+              aria-label={totalItems > 0 ? `Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}` : 'Cart'}
+            >
               <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+                <span aria-hidden="true" className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
                   {totalItems}
                 </span>
               )}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           {user ? (
             <div className="flex items-center gap-2">
               {user.role === 'admin' && (
-                <Link href="/admin">
-                  <Button variant="outline" size="sm" className="hidden sm:flex">
-                    Dashboard
-                  </Button>
-                </Link>
+                <Button asChild variant="outline" size="sm" className="hidden sm:flex">
+                  <Link href="/admin">Dashboard</Link>
+                </Button>
               )}
-              <Button variant="ghost" size="icon" onClick={logout}>
+              <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
+                <Link href="/orders" aria-label="My orders">
+                  <ClipboardList className="h-5 w-5" />
+                </Link>
+              </Button>
+              <Button aria-label="Log out" variant="ghost" size="icon" onClick={logout}>
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
           ) : (
-            <Link href="/login">
-              <Button variant="ghost" size="icon">
+            <Button asChild variant="ghost" size="icon">
+              <Link href="/login" aria-label="Log in">
                 <User className="h-5 w-5" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           )}
 
           {/* Mobile Menu */}
           <Sheet>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
+              <Button aria-label="Open menu" variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72 bg-card">
-              <VisuallyHidden>
-                <SheetTitle>Navigation Menu</SheetTitle>
-              </VisuallyHidden>
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="flex flex-col gap-6 mt-8">
                 {navLinks.map(link => (
                   <button
@@ -174,6 +177,9 @@ export function Navbar() {
                         Admin Dashboard
                       </Link>
                     )}
+                    <Link href="/orders" className="text-lg font-medium text-foreground hover:text-primary">
+                      My Orders
+                    </Link>
                     <button
                       onClick={logout}
                       className="text-lg font-medium text-left text-foreground hover:text-primary"

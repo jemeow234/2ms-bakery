@@ -74,7 +74,7 @@ export async function sendOrderReceipt(orderId: string): Promise<void> {
       distance: row.distance,
       paymentMethod: row.payment_method,
       total: Number(row.total),
-      items: (row.order_items || []).map((item: any) => ({
+      items: ((row.order_items ?? []) as { product_name: string; quantity: number; price: number | string }[]).map(item => ({
         name: item.product_name,
         quantity: item.quantity,
         price: Number(item.price),

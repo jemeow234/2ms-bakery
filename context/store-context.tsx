@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
 import { Product, Order, InventoryLog, Announcement, OrderFeedback } from '@/lib/types'
 import { useAuth } from './auth-context'
 
@@ -23,8 +23,10 @@ interface StoreContextType {
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
   deleteAnnouncement: (id: string) => Promise<boolean>
-  addFeedback: (feedback: Omit<OrderFeedback, 'id' | 'createdAt'>) => Promise<void>
-  refreshProducts: () => Promise<void>
+  addFeedback: (
+    feedback: Pick<OrderFeedback, 'orderId' | 'rating' | 'comment'>
+  ) => Promise<{ ok: boolean; error?: string }>
+  refreshProducts: () => Promise<Product[] | null>
   refreshOrders: () => Promise<void>
   refreshAdminOrders: () => Promise<void>
   refreshInventoryLogs: () => Promise<void>
@@ -33,8 +35,14 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
 
+// One store for the whole app (mounted in the root layout, admin included).
+// Every function is stable and the context value only changes when the data
+// does, so components that only call actions don't re-render on every fetch.
 export function StoreProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const userId = user?.id ?? null
+  const isAdmin = user?.role === 'admin'
+
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [adminOrders, setAdminOrders] = useState<Order[]>([])
@@ -43,25 +51,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [feedbacks, setFeedbacks] = useState<OrderFeedback[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  // Fetch products
-  const refreshProducts = async () => {
+  // Fetch products. Also returns them, for callers that need the fresh list
+  // before the next render (checkout's stock and price check).
+  const refreshProducts = useCallback(async (): Promise<Product[] | null> => {
     try {
       setIsLoading(true)
-      const res = await fetch('/api/products')
+      const res = await fetch('/api/products', { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
-        setProducts(data.products || [])
+        const fresh: Product[] = data.products || []
+        setProducts(fresh)
+        return fresh
       }
+      return null
     } catch (error) {
-      console.error('[v0] Failed to fetch products:', error)
+      console.error('[store] Failed to fetch products:', error)
+      return null
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  // Fetch user's orders
-  const refreshOrders = async () => {
-    if (!user) return
+  // The signed-in customer's own orders
+  const refreshOrders = useCallback(async () => {
+    if (!userId) return
     try {
       const res = await fetch('/api/orders')
       if (res.ok) {
@@ -69,13 +82,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setOrders(data.orders || [])
       }
     } catch (error) {
-      console.error('[v0] Failed to fetch orders:', error)
+      console.error('[store] Failed to fetch orders:', error)
     }
-  }
+  }, [userId])
 
-  // Fetch all orders (admin only)
-  const refreshAdminOrders = async () => {
-    if (!user || user.role !== 'admin') return
+  // Every order (admin only)
+  const refreshAdminOrders = useCallback(async () => {
+    if (!isAdmin) return
     try {
       const res = await fetch('/api/admin/orders')
       if (res.ok) {
@@ -83,13 +96,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAdminOrders(data.orders || [])
       }
     } catch (error) {
-      console.error('[v0] Failed to fetch admin orders:', error)
+      console.error('[store] Failed to fetch admin orders:', error)
     }
-  }
+  }, [isAdmin])
 
-  // Fetch inventory activity log (admin only)
-  const refreshInventoryLogs = async () => {
-    if (!user || user.role !== 'admin') return
+  // Latest inventory activity (admin only)
+  const refreshInventoryLogs = useCallback(async () => {
+    if (!isAdmin) return
     try {
       const res = await fetch('/api/admin/inventory')
       if (res.ok) {
@@ -97,12 +110,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setInventoryLogs(data.logs || [])
       }
     } catch (error) {
-      console.error('[v0] Failed to fetch inventory logs:', error)
+      console.error('[store] Failed to fetch inventory logs:', error)
     }
-  }
+  }, [isAdmin])
 
-  // Fetch announcements
-  const refreshAnnouncements = async () => {
+  const refreshAnnouncements = useCallback(async () => {
     try {
       const res = await fetch('/api/announcements')
       if (res.ok) {
@@ -110,30 +122,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAnnouncements(data.announcements || [])
       }
     } catch (error) {
-      console.error('[v0] Failed to fetch announcements:', error)
+      console.error('[store] Failed to fetch announcements:', error)
     }
-  }
+  }, [])
 
   // Initial load — fetches data from the API, standard effect-based data fetching
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshProducts()
     refreshAnnouncements()
-  }, [])
+  }, [refreshProducts, refreshAnnouncements])
 
-  // Refresh orders when user changes
+  // Reload account data when the person signs in or out
   useEffect(() => {
-    if (user) {
+    if (!userId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      refreshOrders()
-      if (user.role === 'admin') {
-        refreshAdminOrders()
-        refreshInventoryLogs()
-      }
+      setOrders([])
+      setAdminOrders([])
+      setInventoryLogs([])
+      return
     }
-  }, [user])
+    refreshOrders()
+    if (isAdmin) {
+      refreshAdminOrders()
+      refreshInventoryLogs()
+    }
+  }, [userId, isAdmin, refreshOrders, refreshAdminOrders, refreshInventoryLogs])
 
-  const updateProduct = async (product: Product): Promise<boolean> => {
+  const updateProduct = useCallback(async (product: Product): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/products/${product.id}`, {
         method: 'PATCH',
@@ -141,17 +157,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify(product)
       })
       if (res.ok) {
-        setProducts(prev => prev.map(p => p.id === product.id ? product : p))
+        // The saved row, not the dialog's copy — its stock may be out of date.
+        const data = await res.json()
+        setProducts(prev => prev.map(p => p.id === product.id ? data.product : p))
         return true
       }
       return false
     } catch (error) {
-      console.error('[v0] Failed to update product:', error)
+      console.error('[store] Failed to update product:', error)
       return false
     }
-  }
+  }, [])
 
-  const addProduct = async (productData: Omit<Product, 'id'>): Promise<boolean> => {
+  const addProduct = useCallback(async (productData: Omit<Product, 'id'>): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/products', {
         method: 'POST',
@@ -165,12 +183,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       return false
     } catch (error) {
-      console.error('[v0] Failed to add product:', error)
+      console.error('[store] Failed to add product:', error)
       return false
     }
-  }
+  }, [])
 
-  const deleteProduct = async (id: string) => {
+  const deleteProduct = useCallback(async (id: string) => {
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
         method: 'DELETE'
@@ -179,11 +197,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setProducts(prev => prev.filter(p => p.id !== id))
       }
     } catch (error) {
-      console.error('[v0] Failed to delete product:', error)
+      console.error('[store] Failed to delete product:', error)
     }
-  }
+  }, [])
 
-  const updateStock = async (
+  const updateStock = useCallback(async (
     productId: string,
     quantity: number,
     type: InventoryLog['type'],
@@ -202,50 +220,76 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       return false
     } catch (error) {
-      console.error('[v0] Failed to update stock:', error)
+      console.error('[store] Failed to update stock:', error)
       return false
     }
-  }
+  }, [refreshProducts, refreshInventoryLogs])
 
-  const addOrder = async (
+  const addOrder = useCallback(async (
     orderData: Omit<Order, 'id' | 'createdAt'>,
     paymentProof?: File
   ): Promise<{ order: Order | null; error?: string }> => {
+    // The server prices the order itself; it only needs ids and quantities,
+    // plus the total the customer was shown so it can catch a price change.
+    const payload = {
+      items: orderData.items.map(item => ({ productId: item.product.id, quantity: item.quantity })),
+      expectedTotal: orderData.total,
+      customerName: orderData.customerName,
+      customerEmail: orderData.customerEmail,
+      customerPhone: orderData.customerPhone,
+      address: orderData.address,
+      deliveryType: orderData.deliveryType,
+      paymentMethod: orderData.paymentMethod,
+      deliveryDate: orderData.deliveryDate,
+      deliverySession: orderData.deliverySession,
+      // POS sales are the only orders created already completed.
+      walkIn: orderData.status === 'completed',
+    }
     try {
       let res: Response
       if (paymentProof) {
         // Multipart so the screenshot travels with the order in one request;
         // the browser sets the boundary header itself.
         const form = new FormData()
-        form.append('order', JSON.stringify(orderData))
+        form.append('order', JSON.stringify(payload))
         form.append('paymentProof', paymentProof)
         res = await fetch('/api/orders', { method: 'POST', body: form })
       } else {
         res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
+          body: JSON.stringify(payload)
         })
       }
       if (res.ok) {
         const data = await res.json()
-        setOrders(prev => [data.order, ...prev])
-        if (user?.role === 'admin') {
+        // A walk-in isn't one of the signed-in admin's own orders.
+        if (!payload.walkIn) {
+          setOrders(prev => [data.order, ...prev])
+        }
+        if (isAdmin) {
           setAdminOrders(prev => [data.order, ...prev])
         }
+        // Stock just went down.
+        refreshProducts()
         return { order: data.order }
+      }
+      // A 409 means prices or stock moved under the cart; reload the catalog
+      // so the cart shows what the server will actually accept.
+      if (res.status === 409) {
+        refreshProducts()
       }
       // Pass the API's reason through (out of range, session closed, …) so the
       // caller can show it instead of a generic failure.
       const data = await res.json().catch(() => ({}))
       return { order: null, error: data.error }
     } catch (error) {
-      console.error('[v0] Failed to create order:', error)
+      console.error('[store] Failed to create order:', error)
       return { order: null }
     }
-  }
+  }, [isAdmin, refreshProducts])
 
-  const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<boolean> => {
+  const updateOrderStatus = useCallback(async (orderId: string, status: Order['status']): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PUT',
@@ -256,16 +300,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setAdminOrders(prev =>
           prev.map(o => o.id === orderId ? { ...o, status } : o)
         )
+        // A cancellation put stock back.
+        if (status === 'cancelled') {
+          refreshProducts()
+          refreshInventoryLogs()
+        }
         return true
       }
       return false
     } catch (error) {
-      console.error('[v0] Failed to update order status:', error)
+      console.error('[store] Failed to update order status:', error)
       return false
     }
-  }
+  }, [refreshProducts, refreshInventoryLogs])
 
-  const addAnnouncement = async (announcementData: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>): Promise<boolean> => {
+  const addAnnouncement = useCallback(async (
+    announcementData: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>
+  ): Promise<boolean> => {
     try {
       const res = await fetch('/api/admin/announcements', {
         method: 'POST',
@@ -279,12 +330,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       return false
     } catch (error) {
-      console.error('[v0] Failed to create announcement:', error)
+      console.error('[store] Failed to create announcement:', error)
       return false
     }
-  }
+  }, [])
 
-  const deleteAnnouncement = async (id: string): Promise<boolean> => {
+  const deleteAnnouncement = useCallback(async (id: string): Promise<boolean> => {
     try {
       const res = await fetch(`/api/admin/announcements/${id}`, {
         method: 'DELETE'
@@ -295,53 +346,63 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       return false
     } catch (error) {
-      console.error('[v0] Failed to delete announcement:', error)
+      console.error('[store] Failed to delete announcement:', error)
       return false
     }
-  }
+  }, [])
 
-  const addFeedback = async (feedbackData: Omit<OrderFeedback, 'id' | 'createdAt'>) => {
+  const addFeedback = useCallback(async (
+    feedbackData: Pick<OrderFeedback, 'orderId' | 'rating' | 'comment'>
+  ): Promise<{ ok: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(feedbackData)
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        const data = await res.json()
         setFeedbacks(prev => [data.feedback, ...prev])
+        return { ok: true }
       }
+      return { ok: false, error: data.error }
     } catch (error) {
-      console.error('[v0] Failed to add feedback:', error)
+      console.error('[store] Failed to add feedback:', error)
+      return { ok: false }
     }
-  }
+  }, [])
+
+  const value = useMemo<StoreContextType>(() => ({
+    products,
+    orders,
+    adminOrders,
+    inventoryLogs,
+    announcements,
+    feedbacks,
+    isLoading,
+    updateProduct,
+    addProduct,
+    deleteProduct,
+    updateStock,
+    addOrder,
+    updateOrderStatus,
+    addAnnouncement,
+    deleteAnnouncement,
+    addFeedback,
+    refreshProducts,
+    refreshOrders,
+    refreshAdminOrders,
+    refreshInventoryLogs,
+    refreshAnnouncements,
+  }), [
+    products, orders, adminOrders, inventoryLogs, announcements, feedbacks, isLoading,
+    updateProduct, addProduct, deleteProduct, updateStock, addOrder, updateOrderStatus,
+    addAnnouncement, deleteAnnouncement, addFeedback, refreshProducts, refreshOrders,
+    refreshAdminOrders, refreshInventoryLogs, refreshAnnouncements,
+  ])
 
   return (
-    <StoreContext.Provider
-      value={{
-        products,
-        orders,
-        adminOrders,
-        inventoryLogs,
-        announcements,
-        feedbacks,
-        isLoading,
-        updateProduct,
-        addProduct,
-        deleteProduct,
-        updateStock,
-        addOrder,
-        updateOrderStatus,
-        addAnnouncement,
-        deleteAnnouncement,
-        addFeedback,
-        refreshProducts,
-        refreshOrders,
-        refreshAdminOrders,
-        refreshInventoryLogs,
-        refreshAnnouncements
-      }}
-    >
+    <StoreContext.Provider value={value}>
       {children}
     </StoreContext.Provider>
   )

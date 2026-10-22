@@ -39,17 +39,22 @@ const statusConfig = {
   cancelled: { label: 'Cancelled', color: 'bg-destructive/10 text-destructive', icon: XCircle },
 }
 
+const PAGE_SIZE = 50
+
 export default function OrdersPage() {
   const { adminOrders: orders, updateOrderStatus } = useStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  // Rendered a page at a time; every order is still searchable.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   const filteredOrders = orders.filter(order => {
+    const query = search.toLowerCase()
     const matchesSearch =
-      order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(search.toLowerCase())
+      order.id.toLowerCase().includes(query) ||
+      (order.customerName ?? '').toLowerCase().includes(query)
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -134,12 +139,21 @@ export default function OrdersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => {
+              setSearch(e.target.value)
+              setVisibleCount(PAGE_SIZE)
+            }}
             placeholder="Search orders..."
             className="pl-10 bg-card border-border"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={value => {
+            setStatusFilter(value)
+            setVisibleCount(PAGE_SIZE)
+          }}
+        >
           <SelectTrigger className="w-[180px] bg-card border-border">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -175,7 +189,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map(order => {
+                {filteredOrders.slice(0, visibleCount).map(order => {
                   const StatusIcon = statusConfig[order.status].icon
                   return (
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
@@ -255,6 +269,13 @@ export default function OrdersPage() {
             </table>
           )}
         </div>
+        {filteredOrders.length > visibleCount && (
+          <div className="p-4 border-t border-border text-center">
+            <Button variant="outline" onClick={() => setVisibleCount(count => count + PAGE_SIZE)}>
+              Show more ({filteredOrders.length - visibleCount} left)
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Order Detail Dialog */}

@@ -53,6 +53,8 @@ import {
 import { LogoMark } from '@/components/logo-mark'
 import { PaymentProofDropzone } from '@/components/payment-proof-dropzone'
 import { PAYMENT_QR_IMAGE } from '@/lib/payment'
+import type { Order } from '@/lib/types'
+import { shortOrderNumber } from '@/lib/orders'
 
 type QuoteStatus = 'idle' | 'loading' | 'ok' | 'out_of_range' | 'not_found' | 'error'
 
@@ -62,9 +64,15 @@ interface DeliveryQuoteState {
   matchedAddress: string
 }
 
+// Stock and price check that gates the GCash QR (see verifyCart).
+type CartCheck =
+  | { status: 'idle' | 'checking' | 'error' }
+  | { status: 'problem'; problems: string[] }
+  | { status: 'ok'; cartKey: string; total: number; previousTotal: number }
+
 export default function CheckoutPage() {
   const { items, updateQuantity, removeFromCart, clearCart, totalPrice } = useCart()
-  const { addOrder } = useStore()
+  const { addOrder, refreshProducts } = useStore()
   const { user } = useAuth()
   const router = useRouter()
 
@@ -73,7 +81,7 @@ export default function CheckoutPage() {
   const [orderNumber, setOrderNumber] = useState('')
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const [showFeedback, setShowFeedback] = useState(false)
-  const [lastOrder, setLastOrder] = useState<any>(null)
+  const [lastOrder, setLastOrder] = useState<Order | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -89,6 +97,7 @@ export default function CheckoutPage() {
   const [quoteStatus, setQuoteStatus] = useState<QuoteStatus>('idle')
   const [deliveryDate, setDeliveryDate] = useState('')
   const [deliverySession, setDeliverySession] = useState<DeliverySession | ''>('')
+  const [cartCheck, setCartCheck] = useState<CartCheck>({ status: 'idle' })
   // Bumped on every lookup and every address edit, so a slow response for an
   // older address can never overwrite the result for the current one.
   const quoteRequestId = useRef(0)
@@ -171,11 +180,59 @@ export default function CheckoutPage() {
   const addressBlocksCheckout =
     isDelivery && (quoteStatus === 'out_of_range' || quoteStatus === 'not_found')
   const isGcash = formData.paymentMethod === 'gcash'
+  const hasStockProblem = items.some(item => item.quantity > item.product.stock)
+  // The GCash check covers exactly this cart; any quantity change re-arms it.
+  const cartKey = items.map(item => `${item.product.id}:${item.quantity}`).join(',')
+  const gcashChecked = cartCheck.status === 'ok' && cartCheck.cartKey === cartKey
   const canCheckout =
     totalQuantity >= MINIMUM_ORDER_QUANTITY &&
     hasSchedule &&
     !addressBlocksCheckout &&
-    (!isGcash || paymentProof !== null)
+    !hasStockProblem &&
+    (!isGcash || (gcashChecked && paymentProof !== null))
+
+  /**
+   * Re-reads stock and prices before showing the GCash QR. The customer pays
+   * before placing the order, so the amount on screen must be the amount the
+   * server will charge, and every item must still be available — otherwise
+   * they pay and then get refused.
+   */
+  const verifyCart = async () => {
+    const shownTotal = totalPrice
+    const checkedKey = cartKey
+    setCartCheck({ status: 'checking' })
+
+    const fresh = await refreshProducts()
+    if (!fresh) {
+      setCartCheck({ status: 'error' })
+      return
+    }
+
+    const byId = new Map(fresh.map(product => [product.id, product]))
+    const problems: string[] = []
+    let total = 0
+    for (const item of items) {
+      const product = byId.get(item.product.id)
+      if (!product) {
+        problems.push(`${item.product.name} is no longer available.`)
+        continue
+      }
+      if (product.stock < item.quantity) {
+        problems.push(
+          product.stock === 0
+            ? `${product.name} is sold out.`
+            : `Only ${product.stock} ${product.name} left — you have ${item.quantity} in your cart.`
+        )
+      }
+      total += product.price * item.quantity
+    }
+
+    setCartCheck(
+      problems.length > 0
+        ? { status: 'problem', problems }
+        : { status: 'ok', cartKey: checkedKey, total, previousTotal: shownTotal }
+    )
+  }
 
   // An address pre-filled from the profile never gets a blur event, so check it
   // as soon as the customer reaches the details step.
@@ -183,6 +240,9 @@ export default function CheckoutPage() {
     setStep('details')
     if (isDelivery && quoteStatus === 'idle' && formData.address.trim()) {
       fetchDeliveryQuote(formData.address)
+    }
+    if (isGcash && !gcashChecked) {
+      verifyCart()
     }
   }
 
@@ -231,9 +291,6 @@ export default function CheckoutPage() {
       }
     }
 
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
     try {
       const { order, error } = await addOrder({
         items: items.map(item => ({
@@ -254,8 +311,16 @@ export default function CheckoutPage() {
       }, isGcash ? paymentProof ?? undefined : undefined)
 
       if (!order) {
-        toast.error(error || 'Failed to place order. Please try again.')
+        toast.error(
+          error || 'Failed to place order. Please try again.',
+          isGcash
+            ? { description: "If you've already paid, please contact us and we'll sort it out." }
+            : undefined
+        )
         setIsProcessing(false)
+        // Prices or stock may have moved; show the QR again only once the
+        // cart checks out.
+        if (isGcash) verifyCart()
         return
       }
 
@@ -287,7 +352,7 @@ export default function CheckoutPage() {
             <p className="text-muted-foreground mb-2">
               Thank you for your order. Your order number is:
             </p>
-            <p className="font-mono text-lg font-bold text-primary mb-6">{orderNumber}</p>
+            <p className="font-mono text-lg font-bold text-primary mb-6">#{shortOrderNumber(orderNumber)}</p>
             <p className="text-muted-foreground text-sm mb-2">
               {formData.deliveryType === 'delivery'
                 ? `Delivery to ${formData.address}`
@@ -299,25 +364,34 @@ export default function CheckoutPage() {
                 {formatSchedule(deliveryDate, deliverySession || null)}
               </p>
             )}
-            <p className="text-muted-foreground text-sm mb-8">
+            <p className="text-muted-foreground text-sm mb-2">
               We&apos;ll prepare your items with love. We&apos;ll email your receipt to{' '}
               {formData.email} once your order is completed.
             </p>
+            <p className="text-muted-foreground text-sm mb-8">
+              {user
+                ? 'You can follow it any time from My Orders.'
+                : 'Bookmark the tracking page to check on your order later.'}
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/">
-                <Button variant="outline" className="w-full sm:w-auto">
+              <Button asChild className="w-full sm:w-auto">
+                <Link href={`/orders/${orderNumber}`}>Track your order</Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link href="/">
                   Continue Shopping
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
-        <FeedbackModal 
-          order={lastOrder} 
-          isOpen={showFeedback} 
-          onClose={() => setShowFeedback(false)}
-          userId={user?.id || 'guest'}
-        />
+        {user && lastOrder && (
+          <FeedbackModal
+            order={lastOrder}
+            isOpen={showFeedback}
+            onClose={() => setShowFeedback(false)}
+          />
+        )}
       </>
     )
   }
@@ -346,12 +420,12 @@ export default function CheckoutPage() {
                 Hi, {user.name.split(' ')[0]}
               </span>
             ) : (
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="gap-2">
+              <Button asChild variant="ghost" size="sm" className="gap-2">
+                <Link href="/login">
                   <LogIn className="h-4 w-4" />
                   Sign In
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
           </div>
         </div>
@@ -367,11 +441,11 @@ export default function CheckoutPage() {
             <p className="text-muted-foreground mb-8">
               Looks like you haven&apos;t added any items yet.
             </p>
-            <Link href="/#products">
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Link href="/#products">
                 Browse Products
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="grid lg:grid-cols-3 gap-8">
@@ -430,6 +504,7 @@ export default function CheckoutPage() {
                             src={item.product.image}
                             alt={item.product.name}
                             fill
+                            sizes="96px"
                             className="object-cover"
                             onError={() => handleImageError(item.product.id)}
                           />
@@ -453,7 +528,7 @@ export default function CheckoutPage() {
 
                         <div className="flex items-center justify-between mt-4 gap-2">
                           <div className="flex items-center border border-border rounded-lg">
-                            <button
+                            <button aria-label={`Remove one ${item.product.name}`}
                               onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                               className="p-2 hover:bg-secondary transition-colors"
                             >
@@ -462,15 +537,22 @@ export default function CheckoutPage() {
                             <span className="px-2 sm:px-4 py-2 font-medium min-w-[2rem] text-center text-sm">
                               {item.quantity}
                             </span>
-                            <button
+                            <button aria-label={`Add one ${item.product.name}`}
                               onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              className="p-2 hover:bg-secondary transition-colors"
+                              disabled={item.quantity >= item.product.stock}
+                              className="p-2 hover:bg-secondary transition-colors disabled:opacity-40 disabled:pointer-events-none"
                             >
                               <Plus className="h-4 w-4" />
                             </button>
                           </div>
+                          {item.quantity > item.product.stock && (
+                            <p className="text-xs text-destructive flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              {item.product.stock === 0 ? 'Sold out' : `Only ${item.product.stock} left`}
+                            </p>
+                          )}
 
-                          <button
+                          <button aria-label={`Remove ${item.product.name} from cart`}
                             onClick={() => removeFromCart(item.product.id)}
                             className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                           >
@@ -502,12 +584,12 @@ export default function CheckoutPage() {
                       Checkout Details
                     </h2>
                     {!user && (
-                      <Link href="/login">
-                        <Button variant="outline" size="sm" className="gap-2">
+                      <Button asChild variant="outline" size="sm" className="gap-2">
+                        <Link href="/login">
                           <LogIn className="h-4 w-4" />
                           Sign in to auto-fill
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                     )}
                   </div>
 
@@ -730,9 +812,10 @@ export default function CheckoutPage() {
                     <Label className="mb-3 block">Payment Method</Label>
                     <RadioGroup
                       value={formData.paymentMethod}
-                      onValueChange={(value: 'gcash' | 'cash') =>
+                      onValueChange={(value: 'gcash' | 'cash') => {
                         setFormData(s => ({ ...s, paymentMethod: value }))
-                      }
+                        if (value === 'gcash' && !gcashChecked) verifyCart()
+                      }}
                       className="grid sm:grid-cols-2 gap-4"
                     >
                       <label
@@ -769,8 +852,51 @@ export default function CheckoutPage() {
                       </label>
                     </RadioGroup>
 
-                    {isGcash && (
+                    {isGcash && !gcashChecked && (
+                      <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-4 sm:p-5">
+                        {cartCheck.status === 'checking' ? (
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Checking stock and prices before you pay…
+                          </p>
+                        ) : cartCheck.status === 'problem' ? (
+                          <div className="space-y-3">
+                            <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 shrink-0" />
+                              Please update your cart before paying:
+                            </p>
+                            <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                              {cartCheck.problems.map(problem => (
+                                <li key={problem}>{problem}</li>
+                              ))}
+                            </ul>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setStep('cart')}>
+                              Back to cart
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                              {cartCheck.status === 'error'
+                                ? "We couldn't check stock right now."
+                                : "We'll confirm your items are in stock before showing the payment QR."}
+                            </p>
+                            <Button type="button" variant="outline" size="sm" onClick={verifyCart}>
+                              {cartCheck.status === 'error' ? 'Try again' : 'Show payment QR'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {isGcash && gcashChecked && (
                       <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-4 sm:p-5 space-y-4">
+                        {cartCheck.status === 'ok' && Math.abs(cartCheck.total - cartCheck.previousTotal) >= 0.005 && (
+                          <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            Prices changed since you added these items. Your total is now ₱
+                            {cartCheck.total.toFixed(2)} (was ₱{cartCheck.previousTotal.toFixed(2)}).
+                          </p>
+                        )}
                         <div className="flex flex-col sm:flex-row items-center gap-4">
                           <div className="rounded-lg bg-white p-2 shrink-0">
                             <Image
@@ -866,7 +992,7 @@ export default function CheckoutPage() {
                       }
                     }}
                     className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    disabled={totalQuantity < MINIMUM_ORDER_QUANTITY}
+                    disabled={totalQuantity < MINIMUM_ORDER_QUANTITY || hasStockProblem}
                   >
                     Proceed to Checkout
                   </Button>

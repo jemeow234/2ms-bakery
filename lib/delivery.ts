@@ -35,21 +35,34 @@ const LEGACY_SESSIONS: Record<string, { label: string; start: string; end: strin
   afternoon: { label: 'Afternoon', start: '13:00', end: '16:00' },
 }
 
-// Placeholder coordinates until the real shop location is known — see
-// NEXT_PUBLIC_BAKERY_* in .env.local. Every distance is wrong until these are set.
+function coordinate(value: string | undefined): number {
+  return value && value.trim() !== '' ? Number(value) : NaN
+}
+
+// The shop's pin, from NEXT_PUBLIC_BAKERY_LAT / NEXT_PUBLIC_BAKERY_LNG (see
+// .env.example). There is deliberately no fallback: a wrong origin makes every
+// delivery distance wrong, so without these the address check refuses to run.
 export const BAKERY_ORIGIN = {
-  lat: Number(process.env.NEXT_PUBLIC_BAKERY_LAT ?? '14.5995'),
-  lng: Number(process.env.NEXT_PUBLIC_BAKERY_LNG ?? '120.9842'),
+  lat: coordinate(process.env.NEXT_PUBLIC_BAKERY_LAT),
+  lng: coordinate(process.env.NEXT_PUBLIC_BAKERY_LNG),
   address:
     process.env.NEXT_PUBLIC_BAKERY_ADDRESS ||
     "2M's Bakery, Zone 3, Brgy, 385 Gov Leviste Hwy, Bulacnin, Lipa City, Batangas",
 }
 
+export const HAS_BAKERY_LOCATION =
+  Number.isFinite(BAKERY_ORIGIN.lat) && Number.isFinite(BAKERY_ORIGIN.lng)
+
+// Without a pin, maps fall back to searching for the street address.
+const mapQuery = HAS_BAKERY_LOCATION
+  ? `${BAKERY_ORIGIN.lat},${BAKERY_ORIGIN.lng}`
+  : encodeURIComponent(BAKERY_ORIGIN.address)
+
 /** Opens the shop's pinned location in Google Maps (app on phones, site on desktop). */
-export const BAKERY_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${BAKERY_ORIGIN.lat},${BAKERY_ORIGIN.lng}`
+export const BAKERY_MAP_URL = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`
 
 /** Keyless Google Maps embed centred on the shop, for the contact section. */
-export const BAKERY_MAP_EMBED_URL = `https://maps.google.com/maps?q=${BAKERY_ORIGIN.lat},${BAKERY_ORIGIN.lng}&z=17&output=embed`
+export const BAKERY_MAP_EMBED_URL = `https://maps.google.com/maps?q=${mapQuery}&z=17&output=embed`
 
 /** Great-circle distance in km. */
 export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {

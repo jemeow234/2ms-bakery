@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from 
 import { Button } from '@/components/ui/button'
 import { Bell, ShoppingBag, Truck, Store, Clock, Mail, Megaphone, MessageSquare, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { shortOrderNumber } from '@/lib/orders'
 
 type Tab = 'orders' | 'announcements'
 
@@ -29,8 +30,11 @@ export function NotificationCenter() {
     }
   }, [])
 
-  const userOrders = user ? orders.filter(o => o.customerEmail === user.email) : []
-  const unreadOrders = userOrders.filter(o => o.status !== 'completed').length
+  // `orders` is already this account's orders (by user id), whatever email
+  // was typed at checkout. Copied so sorting below can't reorder store state.
+  const userOrders = user ? [...orders] : []
+  // The badge counts orders still on their way; cancelled ones are done too.
+  const unreadOrders = userOrders.filter(o => o.status === 'pending' || o.status === 'processing').length
   const unseenAnnouncements = announcements.filter(a =>
     !lastSeenAnnouncementAt || new Date(a.createdAt).getTime() > new Date(lastSeenAnnouncementAt).getTime()
   ).length
@@ -84,10 +88,15 @@ export function NotificationCenter() {
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={totalUnread > 0 ? `Notifications, ${totalUnread} new` : 'Notifications'}
+        >
           <Bell className="h-5 w-5" />
           {totalUnread > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+            <span aria-hidden="true" className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
               {totalUnread > 9 ? '9+' : totalUnread}
             </span>
           )}
@@ -148,11 +157,11 @@ export function NotificationCenter() {
                   <p className="text-sm text-muted-foreground mb-6">
                     Your order history shows up here once you&apos;re signed in.
                   </p>
-                  <Link href="/login" onClick={() => setIsOpen(false)}>
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Link href="/login" onClick={() => setIsOpen(false)}>
                       Log In
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               ) : userOrders.length === 0 ? (
                 <div className="text-center py-12">
@@ -171,16 +180,19 @@ export function NotificationCenter() {
                   </Button>
                 </div>
               ) : (
-                userOrders
+                <>
+                {userOrders
                   .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                   .map(order => (
-                    <div
+                    <Link
                       key={order.id}
-                      className="rounded-xl border border-border hover:border-primary/30 hover:shadow-md transition-all duration-300 p-4"
+                      href={`/orders/${order.id}`}
+                      onClick={() => setIsOpen(false)}
+                      className="block rounded-xl border border-border hover:border-primary/30 hover:shadow-md transition-all duration-300 p-4"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-xs text-muted-foreground">Order #{order.id.slice(-6).toUpperCase()}</p>
+                          <p className="text-xs text-muted-foreground">Order #{shortOrderNumber(order.id)}</p>
                           <p className="text-sm font-bold text-foreground">
                             ₱{order.total.toFixed(2)}
                           </p>
@@ -208,8 +220,16 @@ export function NotificationCenter() {
                           {order.deliveryType === 'delivery' && order.distance != null && ` · ${order.distance.toFixed(1)} km away`}
                         </span>
                       </div>
-                    </div>
-                  ))
+                    </Link>
+                  ))}
+                <Link
+                  href="/orders"
+                  onClick={() => setIsOpen(false)}
+                  className="block text-center text-sm font-medium text-primary hover:underline pt-2"
+                >
+                  View all orders
+                </Link>
+                </>
               )
             ) : announcements.length === 0 ? (
               <div className="text-center py-12">

@@ -1,5 +1,6 @@
 import { BAKERY_ORIGIN, formatSchedule } from '@/lib/delivery'
 import { formatPaymentMethod } from '@/lib/utils'
+import { shortOrderNumber } from '@/lib/orders'
 
 export interface ReceiptItem {
   name: string
@@ -21,10 +22,6 @@ export interface ReceiptOrder {
   paymentMethod: string
   total: number
   items: ReceiptItem[]
-}
-
-export function shortOrderNumber(id: string): string {
-  return id.slice(-6).toUpperCase()
 }
 
 function peso(amount: number): string {

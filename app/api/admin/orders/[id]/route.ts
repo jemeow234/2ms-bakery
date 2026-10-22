@@ -1,47 +1,50 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
+import { z } from 'zod'
 import { sendOrderReceipt } from '@/lib/email/send-receipt'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdmin, serverError } from '@/lib/api'
+
+const statusSchema = z.object({
+  status: z.enum(['pending', 'processing', 'completed', 'cancelled']),
+})
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const parsed = statusSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Unknown order status.' }, { status: 400 })
     }
 
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    // Cancelling puts the order's stock back in the same transaction
+    // (supabase/migrations/0015_order_status_and_walk_ins.sql).
+    const { data, error } = await createAdminClient().rpc('set_order_status', {
+      p_order_id: id,
+      p_status: parsed.data.status,
+    })
 
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (error?.message === 'ORDER_NOT_FOUND') {
+      return NextResponse.json({ error: 'Order not found.' }, { status: 404 })
     }
-
-    const { status } = await req.json()
-
-    const { data, error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', id)
-      .select()
-      .single()
-
+    if (error?.message === 'ORDER_CLOSED') {
+      return NextResponse.json(
+        { error: 'This order is already completed or cancelled and can no longer change.' },
+        { status: 409 }
+      )
+    }
     if (error) throw error
 
     // Email the receipt without blocking the admin UI. sendOrderReceipt is
-    // idempotent, so flipping the status back and forth won't re-send.
+    // idempotent, so a repeated request won't re-send.
     if (data?.status === 'completed') {
       after(() => sendOrderReceipt(id))
     }
 
     return NextResponse.json({ order: data })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/orders', error, "Couldn't update the order. Please try again.")
   }
 }

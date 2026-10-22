@@ -115,7 +115,7 @@ export default function InventoryPage() {
 
       return data.url
     } catch (error) {
-      console.error('[v0] Failed to upload image:', error)
+      console.error('[inventory] Failed to upload image:', error)
       toast.error('Image upload failed')
       return null
     }
@@ -149,7 +149,7 @@ export default function InventoryPage() {
       return
     }
 
-    let imageUrl = '/images/placeholder.jpg'
+    let imageUrl = '/placeholder.jpg'
     if (imageFile) {
       setIsUploadingImage(true)
       const uploadedUrl = await uploadProductImage(imageFile)
@@ -464,6 +464,7 @@ export default function InventoryPage() {
                             src={product.image}
                             alt={product.name}
                             fill
+                            sizes="48px"
                             className="object-cover"
                             onError={() => handleImageError(product.id)}
                           />

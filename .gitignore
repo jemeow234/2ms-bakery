@@ -16,6 +16,4 @@ node_modules
 .DS_Store
 .vercel
 tsconfig.tsbuildinfo
-tsconfig.tsbuildinfo
-tsconfig.tsbuildinfo
 supabase/.temp/cli-latest

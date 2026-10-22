@@ -1,27 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { requireAdmin, serverError } from '@/lib/api'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { data, error } = await supabase
+    const { data, error } = await admin.supabase
       .from('users')
       .select('id, email, name, phone, address, role, created_at')
       .order('created_at', { ascending: false })
@@ -29,7 +14,7 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     return NextResponse.json({ users: data })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/users', error, "Couldn't load users.")
   }
 }

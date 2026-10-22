@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, MIN_PASSWORD_LENGTH } from '@/lib/utils'
 import { LogoMark } from '@/components/logo-mark'
 
 type AuthMode = 'login' | 'register'
@@ -64,8 +64,8 @@ export default function LoginPage() {
       return
     }
 
-    if (registerData.password.length < 6) {
-      toast.error('Password must be at least 6 characters')
+    if (registerData.password.length < MIN_PASSWORD_LENGTH) {
+      toast.error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
       return
     }
 
@@ -187,7 +187,7 @@ export default function LoginPage() {
                       required
                       className="bg-secondary border-border pr-10"
                     />
-                    <button
+                    <button aria-label={showPassword ? 'Hide password' : 'Show password'}
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -296,12 +296,12 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={registerData.password}
                     onChange={e => setRegisterData(s => ({ ...s, password: e.target.value }))}
-                    placeholder="Create a password (min 6 characters)"
+                    placeholder={`Create a password (min ${MIN_PASSWORD_LENGTH} characters)`}
                     required
-                    minLength={6}
+                    minLength={MIN_PASSWORD_LENGTH}
                     className="bg-secondary border-border pr-10"
                   />
-                  <button
+                  <button aria-label={showPassword ? 'Hide password' : 'Show password'}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -322,7 +322,7 @@ export default function LoginPage() {
                   onChange={e => setRegisterData(s => ({ ...s, confirmPassword: e.target.value }))}
                   placeholder="Confirm your password"
                   required
-                  minLength={6}
+                  minLength={MIN_PASSWORD_LENGTH}
                   className="mt-2 bg-secondary border-border"
                 />
               </div>

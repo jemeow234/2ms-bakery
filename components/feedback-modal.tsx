@@ -1,115 +1,112 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Order } from '@/lib/types'
 import { useStore } from '@/context/store-context'
+import { cn } from '@/lib/utils'
 
 interface FeedbackModalProps {
   order: Order
   isOpen: boolean
   onClose: () => void
-  userId: string
 }
 
-export function FeedbackModal({ order, isOpen, onClose, userId }: FeedbackModalProps) {
+// Only shown to signed-in customers: feedback is tied to the account that
+// placed the order.
+export function FeedbackModal({ order, isOpen, onClose }: FeedbackModalProps) {
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { addFeedback } = useStore()
 
-  if (!isOpen) return null
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
     setIsSubmitting(true)
 
-    // Add feedback to store
-    addFeedback({
-      orderId: order.id,
-      userId,
-      rating,
-      comment
-    })
+    const { ok, error } = await addFeedback({ orderId: order.id, rating, comment })
+    setIsSubmitting(false)
 
-    // Show success message and close
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setRating(5)
-      setComment('')
-      onClose()
-    }, 500)
+    if (!ok) {
+      toast.error(error || "We couldn't save your feedback. Please try again.")
+      return
+    }
+
+    toast.success('Thanks for your feedback!')
+    setRating(5)
+    setComment('')
+    onClose()
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-xl shadow-lg max-w-md w-full animate-slide-up">
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <h2 className="text-xl font-serif font-bold text-foreground">Share Your Feedback</h2>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent className="bg-background max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-serif font-bold text-foreground">
+            Share Your Feedback
+          </DialogTitle>
+          <DialogDescription>How would you rate your order?</DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-3">How would you rate your order?</p>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className="transition-transform hover:scale-110"
-                >
-                  <Star
-                    className={`h-8 w-8 ${
-                      star <= rating
-                        ? 'fill-primary text-primary'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div role="radiogroup" aria-label="Rating" className="flex gap-2">
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                role="radio"
+                aria-checked={star === rating}
+                aria-label={`${star} star${star === 1 ? '' : 's'}`}
+                onClick={() => setRating(star)}
+                className="transition-transform hover:scale-110"
+              >
+                <Star
+                  className={cn(
+                    'h-8 w-8',
+                    star <= rating ? 'fill-primary text-primary' : 'text-muted-foreground'
+                  )}
+                />
+              </button>
+            ))}
           </div>
 
           <div>
-            <label className="text-sm text-muted-foreground block mb-2">
+            <Label htmlFor="feedback-comment" className="text-sm text-muted-foreground mb-2">
               Additional Comments (Optional)
-            </label>
-            <textarea
+            </Label>
+            <Textarea
+              id="feedback-comment"
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={e => setComment(e.target.value)}
               placeholder="Tell us about your experience..."
-              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              maxLength={1000}
               rows={4}
+              className="resize-none bg-card"
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-            >
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Skip
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1"
-            >
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

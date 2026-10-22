@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(17);
 
 -- ---------------------------------------------------------------------------
 -- Shape
@@ -38,19 +38,25 @@ select throws_ok(
      values ('delivery', 'cash', 'midnight') $$,
   '23514',
   null,
-  'delivery_session rejects a value outside morning/afternoon'
+  'delivery_session rejects a value that is not a booking slot'
+);
+
+select lives_ok(
+  $$ insert into public.orders (delivery_type, payment_method, delivery_session)
+     values ('delivery', 'gcash', '09:00') $$,
+  'delivery_session accepts an hourly slot (0006)'
 );
 
 select lives_ok(
   $$ insert into public.orders (delivery_type, payment_method, delivery_session)
      values ('delivery', 'cash', 'morning') $$,
-  'delivery_session accepts morning'
+  'delivery_session still accepts legacy morning for old orders'
 );
 
 select lives_ok(
   $$ insert into public.orders (delivery_type, payment_method, delivery_session)
      values ('pickup', 'card', null) $$,
-  'delivery_session may be null (pickup / unscheduled)'
+  'delivery_session may be null (walk-in / unscheduled); legacy card payments stay valid'
 );
 
 -- ---------------------------------------------------------------------------

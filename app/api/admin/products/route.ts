@@ -1,27 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin, serverError } from '@/lib/api'
+import { createProductSchema } from '@/lib/product-schema'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { data, error } = await supabase
+    const { data, error } = await admin.supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false })
@@ -29,43 +15,34 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     return NextResponse.json(data)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/products', error, "Couldn't load products.")
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const parsed = createProductSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Please check the name, price, category and stock.' },
+        { status: 400 }
+      )
     }
 
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await req.json()
-
-    const { data, error } = await supabase
+    const { data, error } = await admin.supabase
       .from('products')
-      .insert(body)
+      .insert(parsed.data)
       .select()
       .single()
 
     if (error) throw error
 
     return NextResponse.json({ product: data })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/products', error, "Couldn't add the product.")
   }
 }
