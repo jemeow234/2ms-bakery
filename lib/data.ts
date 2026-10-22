@@ -183,7 +183,7 @@ export const initialProducts: Product[] = [
     description: 'The everyday Filipino breakfast roll — soft, lightly sweet, and rolled in fine breadcrumbs.',
     price: 2.00,
     category: 'without_palaman',
-    image: '/images/pandesal-final.jpg',
+    image: '/images/regular-pandesal.jpg',
     featured: true,
     stock: 80,
     ingredients: ['Flour', 'Sugar', 'Salt', 'Yeast', 'Butter', 'Breadcrumbs']
@@ -194,7 +194,7 @@ export const initialProducts: Product[] = [
     description: 'Golden, pillowy soft buns baked together in a tray — great on their own or for sandwiches.',
     price: 20.00,
     category: 'with_palaman',
-    image: '/images/exposed-rolls-final.jpg',
+    image: '/images/buns.jpg',
     featured: false,
     stock: 30,
     ingredients: ['Flour', 'Milk', 'Butter', 'Sugar', 'Eggs', 'Yeast']
@@ -205,7 +205,7 @@ export const initialProducts: Product[] = [
     description: 'Soft white sandwich loaf, sliced and ready for breakfast or merienda.',
     price: 25.00,
     category: 'with_palaman',
-    image: '/images/white-loaf-bread-final.jpg',
+    image: '/images/loaf-bread.jpg',
     featured: false,
     stock: 20,
     ingredients: ['Flour', 'Milk', 'Sugar', 'Butter', 'Salt', 'Yeast']
@@ -216,7 +216,7 @@ export const initialProducts: Product[] = [
     description: 'Our big soft white sandwich loaf, sliced — enough for the whole family.',
     price: 50.00,
     category: 'with_palaman',
-    image: '/images/white-loaf-bread-final.jpg',
+    image: '/images/loaf-bread.jpg',
     featured: false,
     stock: 20,
     ingredients: ['Flour', 'Milk', 'Sugar', 'Butter', 'Salt', 'Yeast']
@@ -227,7 +227,7 @@ export const initialProducts: Product[] = [
     description: 'A thick, moist slice of banana bread made with ripe bananas.',
     price: 6.00,
     category: 'with_palaman',
-    image: '/images/sliced-banana-bread-final.jpg',
+    image: '/images/banana-bread.jpg',
     featured: false,
     stock: 40,
     ingredients: ['Flour', 'Ripe bananas', 'Sugar', 'Eggs', 'Butter', 'Baking soda']
@@ -238,7 +238,7 @@ export const initialProducts: Product[] = [
     description: 'A whole loaf of moist banana bread, perfect for sharing.',
     price: 60.00,
     category: 'with_palaman',
-    image: '/images/sliced-banana-bread-final.jpg',
+    image: '/images/banana-bread.jpg',
     featured: true,
     stock: 10,
     ingredients: ['Flour', 'Ripe bananas', 'Sugar', 'Eggs', 'Butter', 'Baking soda']
