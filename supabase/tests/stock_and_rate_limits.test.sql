@@ -1,4 +1,4 @@
--- pgTAP: adjust_stock() (0016) and hit_rate_limit() (0017).
+-- pgTAP: adjust_stock() (0017) and hit_rate_limit() (0018).
 -- Run with: npx supabase test db
 
 begin;

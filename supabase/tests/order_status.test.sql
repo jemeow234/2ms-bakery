@@ -1,4 +1,4 @@
--- pgTAP: set_order_status() (0015_order_status_and_walk_ins.sql) returns an
+-- pgTAP: set_order_status() (0016_order_status_and_walk_ins.sql) returns an
 -- order's stock when it's cancelled — exactly once, and only what the order
 -- actually took — and keeps completed and cancelled orders final.
 -- Run with: npx supabase test db
@@ -55,7 +55,7 @@ select throws_ok(
   'a cancelled order cannot be reopened'
 );
 
--- An order from before 0013 whose stock was never taken: no sale logs.
+-- An order from before 0014 whose stock was never taken: no sale logs.
 insert into public.orders (id, delivery_type, payment_method, status, customer_email)
 values ('cccccccc-0000-4000-8000-000000000001', 'pickup', 'cash', 'pending', 'old@example.com');
 insert into public.order_items (order_id, product_id, product_name, quantity, price)

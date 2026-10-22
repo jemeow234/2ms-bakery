@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     // Cancelling puts the order's stock back in the same transaction
-    // (supabase/migrations/0015_order_status_and_walk_ins.sql).
+    // (supabase/migrations/0016_order_status_and_walk_ins.sql).
     const { data, error } = await createAdminClient().rpc('set_order_status', {
       p_order_id: id,
       p_status: parsed.data.status,

@@ -7,7 +7,7 @@
 -- such policy also lets anyone holding the public key write orders (or
 -- products) straight through the Data API, around every server-side check.
 --
--- Since 0013 a customer's order is written by create_order() under the
+-- Since 0014 a customer's order is written by create_order() under the
 -- service role, so 0000's policies are the complete set the app needs. This
 -- drops every other policy on the app's tables, printing each as a NOTICE.
 -- It first checks that all of 0000's policies exist and stops if any is

@@ -11,7 +11,7 @@
 -- order's stock is already back on the shelf, and a completed one has left
 -- the shop. Moving to 'cancelled' returns exactly what the order took — read
 -- from its 'sale' rows in inventory_logs rather than its items, because
--- orders placed before 0013 didn't always manage to take stock.
+-- orders placed before 0014 didn't always manage to take stock.
 --
 -- Errors: INVALID_STATUS, ORDER_NOT_FOUND, ORDER_CLOSED.
 create or replace function public.set_order_status(p_order_id uuid, p_status text)

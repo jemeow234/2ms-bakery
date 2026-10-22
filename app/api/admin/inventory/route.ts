@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const { productId, type, quantity, note } = parsed.data
 
     // Locked read-change-log in one transaction
-    // (supabase/migrations/0016_adjust_stock_function.sql).
+    // (supabase/migrations/0017_adjust_stock_function.sql).
     const { data, error } = await createAdminClient().rpc('adjust_stock', {
       p_product_id: productId,
       p_type: type,

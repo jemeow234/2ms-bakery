@@ -1,5 +1,5 @@
 // Server-only. Shared request counters backed by hit_rate_limit()
-// (supabase/migrations/0017_rate_limits.sql).
+// (supabase/migrations/0018_rate_limits.sql).
 
 import { createAdminClient } from '@/lib/supabase/admin'
 

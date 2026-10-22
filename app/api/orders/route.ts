@@ -12,7 +12,7 @@ import { mapOrderRow, type OrderRow } from '@/lib/orders'
 
 // The browser only says what it wants and how many. Prices, the total and
 // stock are settled by create_order() in the database
-// (supabase/migrations/0013_create_order_function.sql).
+// (supabase/migrations/0014_create_order_function.sql).
 const orderSchema = z.object({
   items: z
     .array(

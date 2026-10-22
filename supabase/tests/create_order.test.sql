@@ -1,4 +1,4 @@
--- pgTAP: create_order() (0013_create_order_function.sql) prices an order from
+-- pgTAP: create_order() (0014_create_order_function.sql) prices an order from
 -- the products table, takes stock in the same transaction, and refuses
 -- anything it can't honour without writing a thing.
 -- Run with: npx supabase test db

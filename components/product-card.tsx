@@ -5,22 +5,35 @@ import Image from 'next/image'
 import { Product } from '@/lib/types'
 import { useCart } from '@/context/cart-context'
 import { Button } from '@/components/ui/button'
-import { Plus, Minus, ShoppingBag, Check } from 'lucide-react'
+import { Plus, Minus, ShoppingBag, Check, ChevronRight } from 'lucide-react'
 import { cn, formatCategory } from '@/lib/utils'
 import { toast } from 'sonner'
+import { ProductVariantModal } from '@/components/product-variant-modal'
 
 interface ProductCardProps {
   product: Product
   variant?: 'grid' | 'spotlight' | 'compact'
+  // Options the customer picks between in a modal; see groupProductVariants.
+  options?: Product[]
 }
 
-export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
+function stockLabel(stock: number) {
+  return stock === 0 ? 'Out of stock' : `${stock} in stock`
+}
+
+export function ProductCard({ product, variant = 'grid', options = [] }: ProductCardProps) {
+  const hasOptions = options.length > 1
+  const [optionsOpen, setOptionsOpen] = useState(false)
   const [quantity, setQuantity] = useState(1)
   const [isAdded, setIsAdded] = useState(false)
   const [imageError, setImageError] = useState(false)
   const { items, addToCart } = useCart()
 
   const handleAddToCart = () => {
+    if (hasOptions) {
+      setOptionsOpen(true)
+      return
+    }
     const inCart = items.find(item => item.product.id === product.id)?.quantity ?? 0
     if (inCart + quantity > product.stock) {
       toast.error(
@@ -38,6 +51,18 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
       setQuantity(1)
     }, 1500)
   }
+
+  const priceLabel = hasOptions ? `From ₱${product.price.toFixed(2)}` : `₱${product.price.toFixed(2)}`
+
+  const optionsModal = hasOptions && (
+    <ProductVariantModal
+      open={optionsOpen}
+      onOpenChange={setOptionsOpen}
+      name={product.name}
+      image={product.image}
+      variants={options}
+    />
+  )
 
   if (variant === 'compact') {
     return (
@@ -63,7 +88,12 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
           <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
             {product.name}
           </h3>
-          <span className="text-primary font-bold">₱{product.price.toFixed(2)}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-primary font-bold">{priceLabel}</span>
+            <span className={cn('text-xs', product.stock === 0 ? 'text-destructive' : 'text-muted-foreground')}>
+              {stockLabel(product.stock)}
+            </span>
+          </div>
         </div>
 
         <Button
@@ -74,10 +104,11 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
             'shrink-0 transition-all duration-300',
             isAdded ? 'bg-green-600 hover:bg-green-600' : 'bg-primary hover:bg-primary/90'
           )}
-          aria-label={`Add ${product.name} to cart`}
+          aria-label={hasOptions ? `Choose ${product.name} option` : `Add ${product.name} to cart`}
         >
-          {isAdded ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {isAdded ? <Check className="h-4 w-4" /> : hasOptions ? <ChevronRight className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
         </Button>
+        {optionsModal}
       </div>
     )
   }
@@ -115,28 +146,31 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
           <p className="text-white/80 text-sm sm:text-base mb-5 max-w-md text-pretty">
             {product.description}
           </p>
+          <p className="text-white/70 text-sm mb-4">{stockLabel(product.stock)}</p>
 
-          <div className="flex items-center gap-3">
-            <span className="font-serif text-2xl font-bold">₱{product.price.toFixed(2)}</span>
-            <div className="flex items-center border border-white/30 rounded-lg ml-2">
-              <button aria-label="Decrease quantity"
-                onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="p-2 hover:bg-white/10 transition-colors rounded-l-lg"
-                disabled={product.stock === 0}
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <span className="px-3 py-2 font-medium min-w-[2.5rem] text-center">
-                {quantity}
-              </span>
-              <button aria-label="Increase quantity"
-                onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-                className="p-2 hover:bg-white/10 transition-colors rounded-r-lg"
-                disabled={product.stock === 0}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-serif text-2xl font-bold">{priceLabel}</span>
+            {!hasOptions && (
+              <div className="flex items-center border border-white/30 rounded-lg ml-2">
+                <button aria-label="Decrease quantity"
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  className="p-2 hover:bg-white/10 transition-colors rounded-l-lg"
+                  disabled={product.stock === 0}
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="px-3 py-2 font-medium min-w-[2.5rem] text-center">
+                  {quantity}
+                </span>
+                <button aria-label="Increase quantity"
+                  onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                  className="p-2 hover:bg-white/10 transition-colors rounded-r-lg"
+                  disabled={product.stock === 0}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <Button
               onClick={handleAddToCart}
               disabled={product.stock === 0 || isAdded}
@@ -153,12 +187,13 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
               ) : (
                 <>
                   <ShoppingBag className="h-4 w-4 mr-2" />
-                  Add to Cart
+                  {hasOptions ? 'Choose Option' : 'Add to Cart'}
                 </>
               )}
             </Button>
           </div>
         </div>
+        {optionsModal}
       </div>
     )
   }
@@ -204,7 +239,7 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
             {formatCategory(product.category)}
           </span>
           <span className="font-serif text-xl font-bold text-primary">
-            ₱{product.price.toFixed(2)}
+            {priceLabel}
           </span>
         </div>
 
@@ -212,30 +247,36 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
           {product.name}
         </h3>
 
-        <p className="text-muted-foreground text-sm mb-4 line-clamp-2 text-pretty">
+        <p className="text-muted-foreground text-sm mb-2 line-clamp-2 text-pretty">
           {product.description}
         </p>
 
+        <p className={cn('text-sm font-medium mb-4', product.stock === 0 ? 'text-destructive' : 'text-muted-foreground')}>
+          {stockLabel(product.stock)}
+        </p>
+
         <div className="flex items-center gap-3">
-          <div className="flex items-center border border-border rounded-lg">
-            <button aria-label="Decrease quantity"
-              onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="p-2 hover:bg-secondary transition-colors rounded-l-lg"
-              disabled={product.stock === 0}
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
-              {quantity}
-            </span>
-            <button aria-label="Increase quantity"
-              onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-              className="p-2 hover:bg-secondary transition-colors rounded-r-lg"
-              disabled={product.stock === 0}
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
+          {!hasOptions && (
+            <div className="flex items-center border border-border rounded-lg">
+              <button aria-label="Decrease quantity"
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                className="p-2 hover:bg-secondary transition-colors rounded-l-lg"
+                disabled={product.stock === 0}
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
+                {quantity}
+              </span>
+              <button aria-label="Increase quantity"
+                onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                className="p-2 hover:bg-secondary transition-colors rounded-r-lg"
+                disabled={product.stock === 0}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
           <Button
             onClick={handleAddToCart}
@@ -255,12 +296,13 @@ export function ProductCard({ product, variant = 'grid' }: ProductCardProps) {
             ) : (
               <>
                 <ShoppingBag className="h-4 w-4 mr-2" />
-                Add to Cart
+                {hasOptions ? 'Choose Option' : 'Add to Cart'}
               </>
             )}
           </Button>
         </div>
       </div>
+      {optionsModal}
     </div>
   )
 }
