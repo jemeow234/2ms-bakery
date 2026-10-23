@@ -5,10 +5,10 @@ import { Wheat, Clock, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const stats = [
-  { value: '14+', label: 'Years of Experience' },
-  { value: '50K+', label: 'Happy Customers' },
-  { value: '100+', label: 'Unique Recipes' },
-  { value: '5AM', label: 'Fresh Every Day' },
+  { value: '2014', label: 'Re-established' },
+  { value: 'Original', label: 'Recipe' },
+  { value: 'Fresh', label: 'Everyday' },
+  { value: 'Best', label: 'Price' },
 ]
 
 const values = [
@@ -90,17 +90,17 @@ export function AboutSection() {
         {/* Stats */}
         <div
           className={cn(
-            'grid grid-cols-2 md:grid-cols-4 gap-8 mb-20 transition-all duration-700 delay-300',
+            'grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-20 transition-all duration-700 delay-300',
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           )}
         >
           {stats.map((stat, index) => (
             <div
               key={stat.label}
-              className="text-center p-6 rounded-2xl bg-secondary/50 hover:bg-secondary transition-colors duration-300"
+              className="text-center p-4 md:p-6 rounded-2xl bg-secondary/50 hover:bg-secondary transition-colors duration-300"
               style={{ transitionDelay: `${400 + index * 100}ms` }}
             >
-              <div className="font-serif text-4xl md:text-5xl font-bold text-primary mb-2">
+              <div className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary mb-2">
                 {stat.value}
               </div>
               <div className="text-muted-foreground text-sm">{stat.label}</div>
