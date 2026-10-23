@@ -15,7 +15,7 @@ export function createClient() {
 
   // Return null if env vars are missing (for build time)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    console.warn('[v0] Supabase environment variables not set')
+    console.warn('[supabase] NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY not set')
     return null
   }
 

@@ -1,27 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireAdmin, serverError } from '@/lib/api'
 
-export async function GET(req: NextRequest) {
+const announcementSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  message: z.string().trim().min(1).max(5000),
+  type: z.enum(['announcement', 'advertisement']),
+  image: z.string().trim().max(2048).optional(),
+})
+
+export async function GET() {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { data, error } = await supabase
+    const { data, error } = await admin.supabase
       .from('announcements')
       .select('*')
       .order('created_at', { ascending: false })
@@ -29,32 +22,25 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     return NextResponse.json({ announcements: data })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/announcements', error, "Couldn't load announcements.")
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
+    const { supabase, user, profile } = admin
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const parsed = announcementSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Please add a title and a message (up to 5,000 characters).' },
+        { status: 400 }
+      )
     }
-
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role, name')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { title, message, type, image } = await req.json()
+    const { title, message, type, image } = parsed.data
 
     const { data, error } = await supabase
       .from('announcements')
@@ -78,12 +64,12 @@ export async function POST(req: NextRequest) {
         type: data.type,
         image: data.image ?? undefined,
         createdAt: data.created_at,
-        // We already know the poster's name from the role check above —
-        // no need for a follow-up lookup for the item we just created.
-        createdBy: userData?.name || 'Admin',
+        // We already know the poster's name from the admin check — no need
+        // for a follow-up lookup for the item we just created.
+        createdBy: profile.name || 'Admin',
       },
     })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/announcements', error, "Couldn't post the announcement.")
   }
 }

@@ -3,8 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { User } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
-import type { Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js'
-import { migrateLocalStorageToSupabase } from '@/lib/supabase/migrate'
+import type { AuthChangeEvent, Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js'
 
 interface RegisterData {
   name: string
@@ -86,44 +85,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
+    // Subscribing replays the current session as INITIAL_SESSION, so this one
+    // listener covers page load, sign-in, sign-out and account changes.
+    let loadedUserId: string | null = null
+    let cancelled = false
 
-        if (session?.user) {
-          const profile = await loadUserProfile(supabase, session.user)
-          if (profile) {
-            setUser(profile)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+      const authUser = session?.user ?? null
 
-            const migrationDone = localStorage.getItem('bakery-migration-done')
-            if (!migrationDone) {
-              await migrateLocalStorageToSupabase()
-              localStorage.setItem('bakery-migration-done', 'true')
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Auth init error:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    initAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
-      if (session?.user) {
-        const profile = await loadUserProfile(supabase, session.user)
-        setUser(profile)
-      } else {
+      if (!authUser) {
+        loadedUserId = null
         setUser(null)
+        setIsLoading(false)
+        return
       }
+
+      // Tokens refresh about hourly and whenever the tab regains focus; the
+      // profile only needs reloading for a different person or an edit.
+      if (authUser.id === loadedUserId && event !== 'USER_UPDATED') return
+      loadedUserId = authUser.id
+
+      // Supabase calls this while holding its auth lock, and a query from
+      // inside it can wait on that same lock. Load the profile just after.
+      setTimeout(async () => {
+        try {
+          const profile = await loadUserProfile(supabase, authUser)
+          if (!cancelled) setUser(profile)
+        } catch (error) {
+          console.error('Auth profile load error:', error)
+        } finally {
+          if (!cancelled) setIsLoading(false)
+        }
+      }, 0)
     })
 
     return () => {
-      subscription?.unsubscribe()
+      cancelled = true
+      subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase])
 
   const login = async (email: string, password: string): Promise<AuthResult> => {
     if (!supabase) {

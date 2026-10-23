@@ -108,7 +108,7 @@ export default function AnnouncementsPage() {
             <h2 className="text-lg font-bold text-foreground">
               Post New Announcement
             </h2>
-            <button
+            <button aria-label="Close form"
               onClick={() => setShowForm(false)}
               className="text-muted-foreground hover:text-foreground"
             >

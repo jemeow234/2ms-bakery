@@ -1,45 +1,37 @@
-'use client'
+import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { AdminShell } from '@/components/admin/admin-shell'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/context/auth-context'
-import { StoreProvider } from '@/context/store-context'
-import { AdminSidebar } from '@/components/admin/admin-sidebar'
+export const metadata: Metadata = {
+  title: 'Admin',
+  robots: { index: false, follow: false },
+}
 
-export default function AdminLayout({
+// Checked on the server so non-admins never receive the admin pages. Layouts
+// don't re-run on client-side navigation, so the data itself is still guarded
+// by every /api/admin route.
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { user, isLoading } = useAuth()
-  const router = useRouter()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
-      router.push('/login')
-    }
-  }, [user, isLoading, router])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    )
+  if (!user) {
+    redirect('/login')
   }
 
-  if (!user || user.role !== 'admin') {
-    return null
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') {
+    redirect('/')
   }
 
-  return (
-    <StoreProvider>
-      <div className="min-h-screen bg-background flex">
-        <AdminSidebar />
-        <main className="flex-1 min-w-0 ml-64 p-8">
-          {children}
-        </main>
-      </div>
-    </StoreProvider>
-  )
+  return <AdminShell>{children}</AdminShell>
 }

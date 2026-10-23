@@ -1,17 +1,19 @@
 // Server-only. Turns a typed address into a real distance from the bakery via
 // OpenStreetMap's Nominatim. Do not import this from a client component.
 
-import { BAKERY_ORIGIN, DELIVERY_RANGE_KM, calculateDistance } from '@/lib/delivery'
+import { BAKERY_ORIGIN, DELIVERY_RANGE_KM, HAS_BAKERY_LOCATION, calculateDistance } from '@/lib/delivery'
+import { underRateLimit } from '@/lib/rate-limit'
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
-const COUNTRY_CODES = process.env.GEOCODE_COUNTRY_CODES ?? 'ph'
+const COUNTRY_CODES = process.env.GEOCODE_COUNTRY_CODES || 'ph'
 
 // Nominatim's usage policy requires an identifying User-Agent and caps callers
 // at one request per second. Both are enforced below.
 const USER_AGENT =
-  process.env.GEOCODER_USER_AGENT ?? "2MsBakery/1.0 (bakery delivery range check)"
+  process.env.GEOCODER_USER_AGENT || "2MsBakery/1.0 (bakery delivery range check)"
 const MIN_INTERVAL_MS = 1100
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const CACHE_MAX_ENTRIES = 500
 const REQUEST_TIMEOUT_MS = 8000
 
 export interface GeoHit {
@@ -59,6 +61,12 @@ export async function geocodeAddress(address: string): Promise<GeoHit | null> {
   const cached = cache.get(key)
   if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.hit
 
+  // The in-process queue only spaces out this instance's calls; this cap is
+  // shared by every instance, keeping the site near Nominatim's 1 per second.
+  if (!(await underRateLimit('geocoder', 60, 60))) {
+    throw new Error('Geocoder rate limit reached')
+  }
+
   // A throw here propagates (network/5xx) and is deliberately not cached.
   const hit = await schedule(async () => {
     const url = new URL(NOMINATIM_URL)
@@ -86,6 +94,10 @@ export async function geocodeAddress(address: string): Promise<GeoHit | null> {
   })
 
   cache.set(key, { at: Date.now(), hit })
+  // A Map iterates oldest-first, so this drops the least recently added.
+  if (cache.size > CACHE_MAX_ENTRIES) {
+    cache.delete(cache.keys().next().value!)
+  }
   return hit
 }
 
@@ -95,6 +107,12 @@ export async function geocodeAddress(address: string): Promise<GeoHit | null> {
  * Distance is rounded once here, so the number shown is the number enforced.
  */
 export async function quoteDelivery(address: string): Promise<DeliveryQuote> {
+  // Callers treat a throw as "couldn't verify the address", which is right:
+  // a distance from an unknown origin would be meaningless.
+  if (!HAS_BAKERY_LOCATION) {
+    throw new Error('Bakery location is not configured: set NEXT_PUBLIC_BAKERY_LAT and NEXT_PUBLIC_BAKERY_LNG')
+  }
+
   const hit = await geocodeAddress(address)
   if (!hit) return { found: false }
 

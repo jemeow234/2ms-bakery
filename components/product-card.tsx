@@ -27,15 +27,20 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
   const [quantity, setQuantity] = useState(1)
   const [isAdded, setIsAdded] = useState(false)
   const [imageError, setImageError] = useState(false)
-  const { addToCart } = useCart()
+  const { items, addToCart } = useCart()
 
   const handleAddToCart = () => {
     if (hasOptions) {
       setOptionsOpen(true)
       return
     }
-    if (product.stock < quantity) {
-      toast.error('Not enough stock available')
+    const inCart = items.find(item => item.product.id === product.id)?.quantity ?? 0
+    if (inCart + quantity > product.stock) {
+      toast.error(
+        inCart > 0
+          ? `Only ${product.stock} ${product.name} left, and ${inCart} ${inCart === 1 ? 'is' : 'are'} already in your cart`
+          : 'Not enough stock available'
+      )
       return
     }
     addToCart(product, quantity)
@@ -147,7 +152,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
             <span className="font-serif text-2xl font-bold">{priceLabel}</span>
             {!hasOptions && (
               <div className="flex items-center border border-white/30 rounded-lg ml-2">
-                <button
+                <button aria-label="Decrease quantity"
                   onClick={() => setQuantity(q => Math.max(1, q - 1))}
                   className="p-2 hover:bg-white/10 transition-colors rounded-l-lg"
                   disabled={product.stock === 0}
@@ -157,7 +162,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
                 <span className="px-3 py-2 font-medium min-w-[2.5rem] text-center">
                   {quantity}
                 </span>
-                <button
+                <button aria-label="Increase quantity"
                   onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
                   className="p-2 hover:bg-white/10 transition-colors rounded-r-lg"
                   disabled={product.stock === 0}
@@ -206,6 +211,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
             src={product.image}
             alt={product.name}
             fill
+            sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover group-hover:scale-110 transition-transform duration-700"
             onError={() => setImageError(true)}
           />
@@ -252,7 +258,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
         <div className="flex items-center gap-3">
           {!hasOptions && (
             <div className="flex items-center border border-border rounded-lg">
-              <button
+              <button aria-label="Decrease quantity"
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
                 className="p-2 hover:bg-secondary transition-colors rounded-l-lg"
                 disabled={product.stock === 0}
@@ -262,7 +268,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
               <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
                 {quantity}
               </span>
-              <button
+              <button aria-label="Increase quantity"
                 onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
                 className="p-2 hover:bg-secondary transition-colors rounded-r-lg"
                 disabled={product.stock === 0}

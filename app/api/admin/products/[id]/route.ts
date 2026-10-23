@@ -1,66 +1,40 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin, serverError } from '@/lib/api'
+import { updateProductSchema } from '@/lib/product-schema'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const parsed = updateProductSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Please check the name, price and category.' }, { status: 400 })
     }
 
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await req.json()
-
-    const { data, error } = await supabase
+    const { data, error } = await admin.supabase
       .from('products')
-      .update(body)
+      .update(parsed.data)
       .eq('id', id)
       .select()
       .single()
 
     if (error) throw error
 
-    return NextResponse.json(data)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ product: data })
+  } catch (error) {
+    return serverError('admin/products', error, "Couldn't update the product.")
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { error } = await supabase
+    const { error } = await admin.supabase
       .from('products')
       .delete()
       .eq('id', id)
@@ -68,7 +42,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (error) throw error
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/products', error, "Couldn't delete the product.")
   }
 }

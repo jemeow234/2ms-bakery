@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { ArrowLeft, Eye, EyeOff, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { LogoMark } from '@/components/logo-mark'
+import { MIN_PASSWORD_LENGTH } from '@/lib/utils'
 
 type LinkStatus = 'verifying' | 'ready' | 'invalid'
 
@@ -65,8 +66,8 @@ export default function UpdatePasswordPage() {
     e.preventDefault()
     setError('')
 
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
       return
     }
 
@@ -89,7 +90,14 @@ export default function UpdatePasswordPage() {
     setIsLoading(false)
 
     if (updateError) {
-      setError(updateError.message)
+      // With "Secure password change" on in Supabase, a session that wasn't
+      // signed into recently can't change the password without proving it
+      // again — so someone at an unattended device can't take the account.
+      setError(
+        updateError.code === 'reauthentication_needed'
+          ? 'For your security, sign in again (or use a fresh reset link from your email) before changing your password.'
+          : updateError.message
+      )
       return
     }
 
@@ -141,11 +149,11 @@ export default function UpdatePasswordPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 This password reset link is no longer valid. Please request a new one.
               </p>
-              <Link href="/forgot-password">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
+              <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
+                <Link href="/forgot-password">
                   Request New Link
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           )}
 
@@ -161,12 +169,12 @@ export default function UpdatePasswordPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min 6 characters)"
+                    placeholder={`Enter new password (min ${MIN_PASSWORD_LENGTH} characters)`}
                     required
-                    minLength={6}
+                    minLength={MIN_PASSWORD_LENGTH}
                     className="bg-secondary border-border pr-10"
                   />
-                  <button
+                  <button aria-label={showPassword ? 'Hide password' : 'Show password'}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -187,7 +195,7 @@ export default function UpdatePasswordPage() {
                   onChange={e => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter new password"
                   required
-                  minLength={6}
+                  minLength={MIN_PASSWORD_LENGTH}
                   className="mt-2 bg-secondary border-border"
                 />
               </div>

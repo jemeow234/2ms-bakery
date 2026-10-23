@@ -1,5 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { serverError } from '@/lib/api'
+
+const feedbackSchema = z.object({
+  orderId: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(1000).default(''),
+})
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,26 +15,43 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Please sign in to leave feedback.' }, { status: 401 })
     }
 
-    const body = await req.json()
+    const parsed = feedbackSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Please choose a rating from 1 to 5.' }, { status: 400 })
+    }
+    const { orderId, rating, comment } = parsed.data
 
+    // RLS only accepts feedback on an order that belongs to the caller.
     const { data, error } = await supabase
       .from('order_feedback')
-      .insert({ ...body, user_id: user.id })
+      .insert({ order_id: orderId, user_id: user.id, rating, comment })
       .select()
       .single()
 
+    if (error?.code === '42501') {
+      return NextResponse.json({ error: 'You can only rate your own orders.' }, { status: 403 })
+    }
     if (error) throw error
 
-    return NextResponse.json(data)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({
+      feedback: {
+        id: data.id,
+        orderId: data.order_id,
+        userId: data.user_id,
+        rating: data.rating,
+        comment: data.comment,
+        createdAt: data.created_at,
+      },
+    })
+  } catch (error) {
+    return serverError('feedback', error, "We couldn't save your feedback. Please try again.")
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -44,7 +69,7 @@ export async function GET(req: NextRequest) {
     if (error) throw error
 
     return NextResponse.json(data)
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('feedback', error, "Couldn't load your feedback.")
   }
 }

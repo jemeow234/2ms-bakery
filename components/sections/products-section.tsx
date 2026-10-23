@@ -5,18 +5,22 @@ import { ProductCard } from '@/components/product-card'
 import { useStore } from '@/context/store-context'
 import { Button } from '@/components/ui/button'
 import { cn, PRODUCT_CATEGORIES } from '@/lib/utils'
+import type { Product } from '@/lib/types'
 import { groupProductVariants } from '@/lib/product-variants'
 
 const categories = [{ id: 'all', label: 'All Products' }, ...PRODUCT_CATEGORIES]
 
 const PAGE_SIZE = 8
 
-export function ProductsSection() {
+// `initialProducts` is the server-rendered catalog, shown until the store's
+// live copy (with current stock) arrives.
+export function ProductsSection({ initialProducts = [] }: { initialProducts?: Product[] }) {
   const [isVisible, setIsVisible] = useState(false)
   const [activeCategory, setActiveCategory] = useState('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sectionRef = useRef<HTMLDivElement>(null)
-  const { products } = useStore()
+  const { products: liveProducts } = useStore()
+  const products = liveProducts.length > 0 ? liveProducts : initialProducts
 
   const filteredProducts = groupProductVariants(
     activeCategory === 'all'

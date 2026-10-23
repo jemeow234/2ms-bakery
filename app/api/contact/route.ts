@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getReceiptFrom, getResend } from '@/lib/email/client'
 import { escapeHtml } from '@/lib/email/order-receipt'
+import { clientIp, underRateLimit } from '@/lib/rate-limit'
+import { CONTACT_INBOX_DEFAULT } from '@/lib/shop'
 
 // Where "Send us a Message" submissions land. Override with CONTACT_TO_EMAIL.
-const CONTACT_TO = process.env.CONTACT_TO_EMAIL || 'dunwellaranas@gmail.com'
+const CONTACT_TO = process.env.CONTACT_TO_EMAIL || CONTACT_INBOX_DEFAULT
 
 const MAX_NAME = 100
 const MAX_EMAIL = 254
@@ -41,6 +43,13 @@ export async function POST(req: NextRequest) {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
     return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 })
+  }
+
+  if (!(await underRateLimit(`contact:${clientIp(req)}`, 5, 60 * 60))) {
+    return NextResponse.json(
+      { error: "You've sent several messages already. Please try again later, or call or email us directly." },
+      { status: 429 }
+    )
   }
 
   const resend = getResend()

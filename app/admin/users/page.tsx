@@ -14,8 +14,10 @@ import {
 import { Edit2, Trash2, X, Save, Loader2, Users as UsersIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { User } from '@/lib/types'
+import { useAuth } from '@/context/auth-context'
 
 export default function UserManagementPage() {
+  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -58,7 +60,7 @@ export default function UserManagementPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('Are you sure you want to delete this user? Their account can still sign back in — this only removes their profile record.')) {
+    if (!window.confirm("Delete this user's account? They won't be able to sign in again. Their past orders are kept.")) {
       return
     }
 
@@ -68,7 +70,8 @@ export default function UserManagementPage() {
         setUsers(prev => prev.filter(u => u.id !== userId))
         toast.success('User deleted successfully')
       } else {
-        toast.error('Failed to delete user. Please try again.')
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to delete user. Please try again.')
       }
     } catch (error) {
       console.error('Failed to delete user:', error)
@@ -96,7 +99,8 @@ export default function UserManagementPage() {
       })
 
       if (!res.ok) {
-        toast.error('Failed to update user. Please try again.')
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to update user. Please try again.')
         return
       }
 
@@ -138,7 +142,7 @@ export default function UserManagementPage() {
             <h2 className="text-lg font-bold text-foreground">
               Edit User
             </h2>
-            <button
+            <button aria-label="Close editor"
               onClick={handleCancel}
               className="text-muted-foreground hover:text-foreground"
             >
@@ -197,6 +201,7 @@ export default function UserManagementPage() {
               <Select
                 value={formData.role}
                 onValueChange={(value: User['role']) => setFormData(prev => ({ ...prev, role: value }))}
+                disabled={editingUser.id === currentUser?.id}
               >
                 <SelectTrigger className="mt-2">
                   <SelectValue />
@@ -206,6 +211,11 @@ export default function UserManagementPage() {
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              {editingUser.id === currentUser?.id && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  You can&apos;t change your own role.
+                </p>
+              )}
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -286,15 +296,17 @@ export default function UserManagementPage() {
                           <Edit2 className="h-4 w-4" />
                           Edit
                         </Button>
-                        <Button
-                          onClick={() => handleDeleteUser(userData.id)}
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
+                        {userData.id !== currentUser?.id && (
+                          <Button
+                            onClick={() => handleDeleteUser(userData.id)}
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

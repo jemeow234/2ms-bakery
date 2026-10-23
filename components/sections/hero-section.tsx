@@ -107,7 +107,7 @@ export function HeroSection() {
       </div>
 
       {/* Scroll indicator */}
-      <button
+      <button aria-label="Scroll to featured breads"
         onClick={scrollToFeatured}
         className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce text-primary hover:text-primary/80 transition-colors hidden lg:block"
       >

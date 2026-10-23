@@ -1,27 +1,13 @@
-import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin, safeImageExtension, serverError } from '@/lib/api'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    const admin = await requireAdmin()
+    if ('response' in admin) return admin.response
+    const { supabase } = admin
 
     const formData = await req.formData()
     const file = formData.get('file')
@@ -38,8 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Image must be smaller than 5MB' }, { status: 400 })
     }
 
-    const fileExt = file.name.split('.').pop()
-    const filePath = `${crypto.randomUUID()}.${fileExt}`
+    const filePath = `${crypto.randomUUID()}.${safeImageExtension(file)}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
     const { error: uploadError } = await supabase.storage
@@ -47,13 +32,13 @@ export async function POST(req: NextRequest) {
       .upload(filePath, buffer, { contentType: file.type })
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 })
+      return serverError('admin/upload', uploadError, "Couldn't upload the image. Please try again.")
     }
 
     const { data } = supabase.storage.from('product-images').getPublicUrl(filePath)
 
     return NextResponse.json({ url: data.publicUrl })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error) {
+    return serverError('admin/upload', error, "Couldn't upload the image. Please try again.")
   }
 }
