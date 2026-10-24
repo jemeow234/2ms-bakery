@@ -2,6 +2,8 @@
 // never offer something the server will reject.
 
 export const MINIMUM_ORDER_QUANTITY = 2
+/** Smallest order total (₱) the bakery will deliver. Pick-up has no minimum. */
+export const MINIMUM_DELIVERY_TOTAL = 100
 export const DELIVERY_RANGE_KM = 1
 
 /** A session closes this many hours before it starts. */

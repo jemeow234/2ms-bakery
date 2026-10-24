@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, CalendarDays, CheckCircle2, Loader2, MapPin, Store } from 'lucide-react'
+import { ArrowLeft, CalendarDays, CheckCircle2, Loader2, LogIn, MapPin, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,7 +34,7 @@ const OTHER_QUANTITY = 'others'
 const noSubscription = () => () => {}
 
 export default function SpecialOrderPage() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,19 +63,36 @@ export default function SpecialOrderPage() {
           availability before anything is baked.
         </p>
 
-        {/* Re-mount once the session loads so the contact fields start filled in. */}
-        <SpecialOrderForm key={user?.id ?? 'guest'} user={user} />
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : user ? (
+          // Keyed by user so the contact fields refill if the account changes.
+          <SpecialOrderForm key={user.id} user={user} />
+        ) : (
+          <div className="text-center py-16 bg-card rounded-xl border border-border px-6">
+            <LogIn className="h-10 w-10 text-primary mx-auto mb-4" />
+            <h2 className="font-serif text-2xl font-bold text-foreground mb-2">Sign in to order</h2>
+            <p className="text-muted-foreground mb-6">
+              Please sign in or create an account to send a special order request.
+            </p>
+            <Button asChild>
+              <Link href="/login?next=/special-order">Sign in or create an account</Link>
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   )
 }
 
-function SpecialOrderForm({ user }: { user: User | null }) {
+function SpecialOrderForm({ user }: { user: User }) {
   const { products } = useStore()
   const [form, setForm] = useState({
-    name: user?.name ?? '',
-    email: user?.email ?? '',
-    phone: user?.phone ?? '',
+    name: user.name ?? '',
+    email: user.email ?? '',
+    phone: user.phone ?? '',
     product: '',
     quantityChoice: '',
     otherQuantity: '',

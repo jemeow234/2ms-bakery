@@ -3,7 +3,7 @@ import { quoteDelivery } from '@/lib/geocode'
 import { DELIVERY_RANGE_KM } from '@/lib/delivery'
 import { clientIp, underRateLimit } from '@/lib/rate-limit'
 
-// Public on purpose: checkout allows guest orders, so this must work signed out.
+// Public on purpose: it only geocodes an address and holds no customer data.
 export async function POST(req: NextRequest) {
   try {
     // Checkout looks an address up on blur and again on submit; 30 per ten

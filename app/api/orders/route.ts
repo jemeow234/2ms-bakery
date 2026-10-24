@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { z } from 'zod'
-import { DELIVERY_RANGE_KM, MINIMUM_ORDER_QUANTITY, isScheduleValid } from '@/lib/delivery'
+import { DELIVERY_RANGE_KM, MINIMUM_DELIVERY_TOTAL, MINIMUM_ORDER_QUANTITY, isScheduleValid } from '@/lib/delivery'
 import { quoteDelivery } from '@/lib/geocode'
 import { sendOrderReceipt } from '@/lib/email/send-receipt'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -52,6 +52,11 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
+    // Ordering requires an account, so every order is tied to a customer.
+    if (!user) {
+      return NextResponse.json({ error: 'Please sign in to place an order.' }, { status: 401 })
+    }
+
     // GCash orders arrive as multipart so the payment screenshot can ride along
     // with the order; everything else (POS, cash) is plain JSON.
     let body: unknown
@@ -93,9 +98,7 @@ export async function POST(req: NextRequest) {
     // the payment screenshot, and email a receipt — so only staff may make one.
     const isWalkIn = parsed.data.walkIn === true
     if (isWalkIn) {
-      const { data: profile } = user
-        ? await supabase.from('users').select('role').eq('id', user.id).single()
-        : { data: null }
+      const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
       if (profile?.role !== 'admin') {
         return NextResponse.json({ error: 'Only staff can record walk-in sales.' }, { status: 403 })
       }
@@ -114,6 +117,14 @@ export async function POST(req: NextRequest) {
       if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
         return NextResponse.json(
           { error: `Minimum order quantity is ${MINIMUM_ORDER_QUANTITY} items.` },
+          { status: 400 }
+        )
+      }
+      // expectedTotal is safe to check here: create_order() refuses the order
+      // if it doesn't match the real prices.
+      if (deliveryType === 'delivery' && expectedTotal < MINIMUM_DELIVERY_TOTAL) {
+        return NextResponse.json(
+          { error: `Delivery orders must be at least ₱${MINIMUM_DELIVERY_TOTAL}. Add more items or choose pick-up.` },
           { status: 400 }
         )
       }
@@ -203,12 +214,11 @@ export async function POST(req: NextRequest) {
     }
 
     // One transaction: price lookup, stock check and decrement, order, items
-    // and inventory log. Checkout doesn't require an account — user_id is
-    // null for guest orders, and for walk-ins, which belong to the customer
-    // at the counter rather than the admin ringing them up.
+    // and inventory log. user_id is null for walk-ins, which belong to the
+    // customer at the counter rather than the admin ringing them up.
     const { data: order, error: orderError } = await createAdminClient().rpc('create_order', {
       p_items: items.map(item => ({ product_id: item.productId, quantity: item.quantity })),
-      p_user_id: isWalkIn ? null : user?.id ?? null,
+      p_user_id: isWalkIn ? null : user.id,
       p_customer_name: customerName,
       p_customer_email: customerEmail,
       p_customer_phone: customerPhone,

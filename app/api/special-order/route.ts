@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { getReceiptFrom, getResend } from '@/lib/email/client'
 import { escapeHtml } from '@/lib/email/order-receipt'
 import { clientIp, underRateLimit } from '@/lib/rate-limit'
@@ -10,6 +11,13 @@ import { parseSpecialOrder } from '@/lib/special-order'
 const SPECIAL_ORDER_TO = process.env.CONTACT_TO_EMAIL || CONTACT_INBOX_DEFAULT
 
 export async function POST(req: NextRequest) {
+  // Like regular orders, special orders require an account.
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Please sign in to send a special order request.' }, { status: 401 })
+  }
+
   let body: unknown
   try {
     body = await req.json()

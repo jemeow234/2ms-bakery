@@ -43,6 +43,7 @@ import {
   DELIVERY_SESSIONS,
   DELIVERY_SESSION_KEYS,
   DeliverySession,
+  MINIMUM_DELIVERY_TOTAL,
   MINIMUM_ORDER_QUANTITY,
   bakeryTodayISO,
   formatSchedule,
@@ -184,8 +185,10 @@ export default function CheckoutPage() {
   // The GCash check covers exactly this cart; any quantity change re-arms it.
   const cartKey = items.map(item => `${item.product.id}:${item.quantity}`).join(',')
   const gcashChecked = cartCheck.status === 'ok' && cartCheck.cartKey === cartKey
+  const belowDeliveryMinimum = isDelivery && totalPrice < MINIMUM_DELIVERY_TOTAL
   const canCheckout =
     totalQuantity >= MINIMUM_ORDER_QUANTITY &&
+    !belowDeliveryMinimum &&
     hasSchedule &&
     !addressBlocksCheckout &&
     !hasStockProblem &&
@@ -237,6 +240,11 @@ export default function CheckoutPage() {
   // An address pre-filled from the profile never gets a blur event, so check it
   // as soon as the customer reaches the details step.
   const goToDetails = () => {
+    if (!user) {
+      toast.error('Please sign in or create an account to place your order')
+      router.push('/login?next=/checkout')
+      return
+    }
     setStep('details')
     if (isDelivery && quoteStatus === 'idle' && formData.address.trim()) {
       fetchDeliveryQuote(formData.address)
@@ -250,9 +258,20 @@ export default function CheckoutPage() {
     e.preventDefault()
     if (isProcessing) return
 
+    if (!user) {
+      toast.error('Please sign in to place your order')
+      router.push('/login?next=/checkout')
+      return
+    }
+
     // Validate minimum quantity
     if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
       toast.error(`Minimum order quantity is ${MINIMUM_ORDER_QUANTITY} items`)
+      return
+    }
+
+    if (belowDeliveryMinimum) {
+      toast.error(`Delivery orders must be at least ₱${MINIMUM_DELIVERY_TOTAL}. Add more items or choose pick-up.`)
       return
     }
 
@@ -421,7 +440,7 @@ export default function CheckoutPage() {
               </span>
             ) : (
               <Button asChild variant="ghost" size="sm" className="gap-2">
-                <Link href="/login">
+                <Link href="/login?next=/checkout">
                   <LogIn className="h-4 w-4" />
                   Sign In
                 </Link>
@@ -585,9 +604,9 @@ export default function CheckoutPage() {
                     </h2>
                     {!user && (
                       <Button asChild variant="outline" size="sm" className="gap-2">
-                        <Link href="/login">
+                        <Link href="/login?next=/checkout">
                           <LogIn className="h-4 w-4" />
-                          Sign in to auto-fill
+                          Sign in to order
                         </Link>
                       </Button>
                     )}
@@ -632,7 +651,9 @@ export default function CheckoutPage() {
                         <MapPin className="h-5 w-5 text-primary" />
                         <div>
                           <p className="font-medium text-foreground">Delivery</p>
-                          <p className="text-sm text-muted-foreground">Free delivery up to {DELIVERY_RANGE_KM}km</p>
+                          <p className="text-sm text-muted-foreground">
+                            Free delivery up to {DELIVERY_RANGE_KM}km · ₱{MINIMUM_DELIVERY_TOTAL} minimum
+                          </p>
                         </div>
                       </label>
                       <label
@@ -652,6 +673,17 @@ export default function CheckoutPage() {
                         </div>
                       </label>
                     </RadioGroup>
+                    {belowDeliveryMinimum && (
+                      <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-amber-900">₱{MINIMUM_DELIVERY_TOTAL} minimum for delivery</p>
+                          <p className="text-sm text-amber-800">
+                            Add ₱{(MINIMUM_DELIVERY_TOTAL - totalPrice).toFixed(2)} more to your cart, or choose pick-up.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Delivery / pick-up schedule */}

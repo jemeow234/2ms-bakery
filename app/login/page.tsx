@@ -39,6 +39,13 @@ export default function LoginPage() {
   const { login, register } = useAuth()
   const router = useRouter()
 
+  // Pages that need an account (e.g. checkout) send people here with
+  // ?next=/path so they land back where they were. Only same-site paths.
+  const nextPath = () => {
+    const next = new URLSearchParams(window.location.search).get('next')
+    return next && next.startsWith('/') && !next.startsWith('//') ? next : null
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -47,7 +54,7 @@ export default function LoginPage() {
 
     if (result.success) {
       toast.success('Welcome back!')
-      router.push(result.role === 'admin' ? '/admin' : '/')
+      router.push(result.role === 'admin' ? '/admin' : nextPath() ?? '/')
     } else {
       toast.error(result.error || 'Login failed')
     }
@@ -90,7 +97,7 @@ export default function LoginPage() {
         setAuthMode('login')
       } else {
         toast.success('Account created successfully! Welcome to 2M\'s Bakery!')
-        router.push('/')
+        router.push(nextPath() ?? '/')
       }
     } else {
       toast.error(result.error || 'Registration failed')
