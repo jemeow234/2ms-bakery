@@ -45,13 +45,31 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Saved first so the request shows up in the admin panel even if the email
+  // can't be sent.
+  const { error: saveError } = await supabase.from('special_orders').insert({
+    user_id: user.id,
+    name: order.name,
+    email: order.email,
+    phone: order.phone,
+    product: order.product,
+    quantity: order.quantity,
+    needed_by: order.neededBy,
+    fulfillment: order.fulfillment,
+    notes: order.notes,
+  })
+  if (saveError) {
+    console.error('[special-order] save failed:', saveError)
+    return NextResponse.json(
+      { error: "We couldn't send your request. Please try again or contact us directly." },
+      { status: 500 }
+    )
+  }
+
   const resend = getResend()
   if (!resend) {
-    console.warn('[special-order] RESEND_API_KEY not set — cannot send special order request')
-    return NextResponse.json(
-      { error: 'Special orders are unavailable right now. Please call or email us directly.' },
-      { status: 503 }
-    )
+    console.warn('[special-order] RESEND_API_KEY not set — request saved, email skipped')
+    return NextResponse.json({ ok: true })
   }
 
   const fulfillment = order.fulfillment === 'delivery' ? 'Delivery' : 'Pick-up'
@@ -101,11 +119,8 @@ export async function POST(req: NextRequest) {
     })
     if (result.error) throw new Error(result.error.message)
   } catch (error) {
-    console.error('[special-order] send failed:', error instanceof Error ? error.message : error)
-    return NextResponse.json(
-      { error: 'We couldn\'t send your request. Please try again or contact us directly.' },
-      { status: 502 }
-    )
+    // The request is already saved and visible in the admin panel.
+    console.error('[special-order] email failed:', error instanceof Error ? error.message : error)
   }
 
   return NextResponse.json({ ok: true })
