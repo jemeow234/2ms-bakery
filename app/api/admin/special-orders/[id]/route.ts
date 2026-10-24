@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, serverError } from '@/lib/api'
 
 const statusSchema = z.object({
   status: z.enum(['new', 'confirmed', 'completed', 'declined']),
+  // The final amount charged, when completing; defaults to the estimate.
+  total: z.number().nonnegative().max(10_000_000).optional(),
 })
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,17 +20,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Unknown status.' }, { status: 400 })
     }
 
-    const { data, error } = await admin.supabase
-      .from('special_orders')
-      .update({ status: parsed.data.status })
-      .eq('id', id)
-      .select()
-      .maybeSingle()
+    // Completing records the sale in orders, and un-completing removes it, in
+    // the same transaction (supabase/migrations/0023_special_orders_count_as_sales.sql).
+    const { data, error } = await createAdminClient().rpc('set_special_order_status', {
+      p_id: id,
+      p_status: parsed.data.status,
+      p_total: parsed.data.total ?? null,
+    })
 
-    if (error) throw error
-    if (!data) {
+    if (error?.message === 'SPECIAL_ORDER_NOT_FOUND') {
       return NextResponse.json({ error: 'Special order not found.' }, { status: 404 })
     }
+    if (error?.message === 'TOTAL_REQUIRED') {
+      return NextResponse.json(
+        { error: 'Enter the final amount charged to complete this order.' },
+        { status: 400 }
+      )
+    }
+    if (error) throw error
 
     return NextResponse.json({ specialOrder: data })
   } catch (error) {

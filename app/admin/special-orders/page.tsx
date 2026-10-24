@@ -24,6 +24,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useStore } from '@/context/store-context'
 import { toast } from 'sonner'
 
 type SpecialOrderStatus = 'new' | 'confirmed' | 'completed' | 'declined'
@@ -37,6 +38,8 @@ interface SpecialOrder {
   quantity: number
   // Numeric columns can arrive as strings; null for items not on the menu.
   unit_price: number | string | null
+  // The final amount charged, set once it's completed and counted in sales.
+  total: number | string | null
   needed_by: string
   fulfillment: 'pickup' | 'delivery'
   notes: string
@@ -63,6 +66,7 @@ function formatNeededBy(date: string): string {
 }
 
 export default function SpecialOrdersPage() {
+  const { refreshAdminOrders } = useStore()
   const [orders, setOrders] = useState<SpecialOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -92,18 +96,40 @@ export default function SpecialOrdersPage() {
     setReloadKey(key => key + 1)
   }
 
-  const handleStatusChange = async (id: string, status: SpecialOrderStatus) => {
-    const res = await fetch(`/api/admin/special-orders/${id}`, {
+  const handleStatusChange = async (order: SpecialOrder, status: SpecialOrderStatus) => {
+    // Completing records a sale, so ask what was actually charged.
+    let total: number | undefined
+    if (status === 'completed') {
+      const estimate = order.unit_price === null ? '' : (Number(order.unit_price) * order.quantity).toFixed(2)
+      const answer = window.prompt('Final amount charged (₱) — this is added to sales:', estimate)
+      if (answer === null) return
+      total = Number(answer.replace(/[₱,\s]/g, ''))
+      if (!answer.trim() || !Number.isFinite(total) || total < 0) {
+        toast.error('Enter the final amount as a number, e.g. 1500.')
+        return
+      }
+    } else if (order.status === 'completed') {
+      if (!window.confirm('This order is counted in sales. Changing its status removes it from sales. Continue?')) return
+    }
+
+    const res = await fetch(`/api/admin/special-orders/${order.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, total }),
     })
+    const body = await res.json().catch(() => ({}))
     if (!res.ok) {
-      toast.error('Failed to update the request. Please try again.')
+      toast.error(body.error || 'Failed to update the request. Please try again.')
       return
     }
-    setOrders(prev => prev.map(o => (o.id === id ? { ...o, status } : o)))
-    toast.success(`Marked as ${statusConfig[status].label.toLowerCase()}`)
+    setOrders(prev => prev.map(o => (o.id === order.id ? body.specialOrder : o)))
+    toast.success(
+      status === 'completed'
+        ? 'Marked as completed and added to sales'
+        : `Marked as ${statusConfig[status].label.toLowerCase()}`
+    )
+    // The dashboard and reports read sales from the orders list.
+    if (status === 'completed' || order.status === 'completed') refreshAdminOrders()
   }
 
   const handleDelete = async (id: string) => {
@@ -218,8 +244,12 @@ export default function SpecialOrdersPage() {
 
                     <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
                       <p>
-                        <span className="text-muted-foreground">Estimated total: </span>
-                        {order.unit_price === null ? (
+                        <span className="text-muted-foreground">
+                          {order.total !== null ? 'Final total: ' : 'Estimated total: '}
+                        </span>
+                        {order.total !== null ? (
+                          <span className="font-medium text-foreground">₱{Number(order.total).toFixed(2)}</span>
+                        ) : order.unit_price === null ? (
                           <span className="text-muted-foreground">To be quoted</span>
                         ) : (
                           <span className="font-medium text-foreground">
@@ -266,7 +296,7 @@ export default function SpecialOrdersPage() {
                   <div className="flex gap-2 shrink-0">
                     <Select
                       value={order.status}
-                      onValueChange={(value: SpecialOrderStatus) => handleStatusChange(order.id, value)}
+                      onValueChange={(value: SpecialOrderStatus) => handleStatusChange(order, value)}
                     >
                       <SelectTrigger className="w-[140px] h-9" aria-label="Change status">
                         <SelectValue />
