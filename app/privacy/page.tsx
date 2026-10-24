@@ -115,7 +115,7 @@ export default function PrivacyPolicyPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-2">
             <LogoMark className="w-10 h-10" />
-            <span className="font-serif text-lg font-bold text-foreground">2M&apos;s Bakery</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">2M&apos;s Bakery</span>
           </Link>
           <Link
             href="/"

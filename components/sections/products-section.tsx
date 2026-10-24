@@ -37,16 +37,6 @@ export function ProductsSection({ initialProducts = [] }: { initialProducts?: Pr
   }
 
   useEffect(() => {
-    const onCategorySelect = (e: Event) => {
-      const { category } = (e as CustomEvent<{ category: string }>).detail
-      handleCategoryChange(category)
-    }
-
-    window.addEventListener('products-category-select', onCategorySelect)
-    return () => window.removeEventListener('products-category-select', onCategorySelect)
-  }, [])
-
-  useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

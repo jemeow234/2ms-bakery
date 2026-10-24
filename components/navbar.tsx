@@ -19,6 +19,9 @@ const navLinks = [
   { href: '#contact', label: 'Contact' },
 ]
 
+const mobileLinkClass =
+  'block w-full rounded-lg px-3 py-3 text-base font-medium text-left transition-colors hover:bg-primary/5 hover:text-primary'
+
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
@@ -160,35 +163,43 @@ export function Navbar() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-72 bg-card">
+            <SheetContent side="right" className="w-[85vw] max-w-xs bg-card gap-0 overflow-y-auto">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-              <div className="flex flex-col gap-6 mt-8">
+              <Link
+                href="/"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-6 pt-5 pb-4 pr-12 border-b border-border"
+              >
+                <Image src="/images/2mslogo-mark.png" alt="" width={64} height={64} className="w-8 h-8 rounded-full" />
+                <span className="text-base font-bold tracking-tight text-foreground">2M&apos;s Bakery</span>
+              </Link>
+              <div className="flex flex-col gap-1 px-3 py-4">
                 {navLinks.map(link => (
                   <button
                     key={link.href}
                     onClick={() => scrollToSection(link.href)}
                     className={cn(
-                      'text-lg font-medium text-left transition-colors hover:text-primary',
+                      mobileLinkClass,
                       activeSection === link.href.replace('#', '')
-                        ? 'text-primary'
+                        ? 'bg-primary/10 text-primary'
                         : 'text-foreground'
                     )}
                   >
                     {link.label}
                   </button>
                 ))}
-                <Link href="/special-order" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
+                <Link href="/special-order" onClick={() => setMenuOpen(false)} className={cn(mobileLinkClass, 'text-foreground')}>
                   Special Order
                 </Link>
-                <hr className="border-border" />
+                <hr className="border-border my-2 mx-3" />
                 {user ? (
                   <>
                     {user.role === 'admin' && (
-                      <Link href="/admin" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
+                      <Link href="/admin" onClick={() => setMenuOpen(false)} className={cn(mobileLinkClass, 'text-foreground')}>
                         Admin Dashboard
                       </Link>
                     )}
-                    <Link href="/orders" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
+                    <Link href="/orders" onClick={() => setMenuOpen(false)} className={cn(mobileLinkClass, 'text-foreground')}>
                       My Orders
                     </Link>
                     <button
@@ -196,16 +207,24 @@ export function Navbar() {
                         setMenuOpen(false)
                         logout()
                       }}
-                      className="text-lg font-medium text-left text-foreground hover:text-primary"
+                      className={cn(mobileLinkClass, 'text-foreground')}
                     >
                       Logout
                     </button>
                   </>
                 ) : (
-                  <Link href="/login" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className={cn(mobileLinkClass, 'text-foreground')}>
                     Login
                   </Link>
                 )}
+              </div>
+              <div className="mt-auto px-6 pb-6">
+                <Button
+                  onClick={() => scrollToSection('#products')}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  Order Now
+                </Button>
               </div>
             </SheetContent>
           </Sheet>

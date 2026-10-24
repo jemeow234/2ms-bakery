@@ -1,44 +1,19 @@
-'use client'
-
 import Link from 'next/link'
+import { Mail, MapPin, Phone } from 'lucide-react'
 import { LogoMark } from '@/components/logo-mark'
-
-const footerLinks = {
-  shop: [
-    { label: 'All Products', href: '#products', category: 'all' },
-    { label: 'Without Palaman', href: '#products', category: 'without_palaman' },
-    { label: 'With Palaman', href: '#products', category: 'with_palaman' },
-  ],
-  company: [
-    { label: 'About Us', href: '#about' },
-    { label: 'Our Story', href: '#about' },
-    { label: 'Careers', href: '#' },
-    { label: 'Press', href: '#' },
-  ],
-  support: [
-    { label: 'Contact', href: '#contact' },
-    { label: 'FAQ', href: '#' },
-    { label: 'Shipping', href: '#' },
-    { label: 'Returns', href: '#' },
-  ],
-}
+import { BAKERY_ORIGIN } from '@/lib/delivery'
+import { SHOP_EMAIL, SHOP_PHONE } from '@/lib/shop'
 
 export function Footer() {
-  const handleShopLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, category: string) => {
-    e.preventDefault()
-    window.dispatchEvent(new CustomEvent('products-category-select', { detail: { category } }))
-    document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   return (
-    <footer className="bg-foreground text-background py-12 sm:py-16">
+    <footer className="bg-foreground text-background py-10">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-10 sm:gap-12 mb-10 sm:mb-12">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8 mb-8">
           {/* Brand */}
-          <div className="col-span-3 lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2 mb-4">
+          <div>
+            <Link href="/" className="flex items-center gap-2 mb-3">
               <LogoMark className="w-12 h-12" />
-              <span className="text-xl font-bold">2M&apos;s Bakery</span>
+              <span className="text-xl font-bold tracking-tight">2M&apos;s Bakery</span>
             </Link>
             <p className="text-background/70 max-w-sm text-pretty">
               Handcrafted artisan breads and pastries made with love.
@@ -46,63 +21,36 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Shop</h4>
-            <ul className="space-y-3">
-              {footerLinks.shop.map(link => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    onClick={e => handleShopLinkClick(e, link.category)}
-                    className="text-sm sm:text-base text-background/70 hover:text-primary transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map(link => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm sm:text-base text-background/70 hover:text-primary transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map(link => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-sm sm:text-base text-background/70 hover:text-primary transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Contact */}
+          <ul className="space-y-2 text-sm text-background/70">
+            <li>
+              <a href={`mailto:${SHOP_EMAIL}`} className="flex items-center gap-2 hover:text-primary transition-colors break-all">
+                <Mail className="h-4 w-4 shrink-0" />
+                {SHOP_EMAIL}
+              </a>
+            </li>
+            <li>
+              <a href={`tel:${SHOP_PHONE.replace(/\s/g, '')}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Phone className="h-4 w-4 shrink-0" />
+                {SHOP_PHONE}
+              </a>
+            </li>
+            <li className="flex items-start gap-2 max-w-xs">
+              <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+              {BAKERY_ORIGIN.address}
+            </li>
+          </ul>
         </div>
 
         {/* Bottom */}
-        <div className="pt-8 border-t border-background/10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="pt-6 border-t border-background/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-background/50 text-sm">
             &copy; {new Date().getFullYear()} 2M&apos;s Bakery. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-background/50">
+            <Link href="/faqs" className="hover:text-primary transition-colors">
+              FAQs
+            </Link>
             <Link href="/privacy" className="hover:text-primary transition-colors">
               Privacy Policy
             </Link>

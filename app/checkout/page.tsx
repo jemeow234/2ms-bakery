@@ -430,7 +430,7 @@ export default function CheckoutPage() {
 
           <Link href="/" className="flex items-center gap-2">
             <LogoMark className="w-9 h-9" priority />
-            <span className="font-serif text-lg font-bold text-foreground">2M&apos;s Bakery</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">2M&apos;s Bakery</span>
           </Link>
 
           <div className="flex items-center gap-4">

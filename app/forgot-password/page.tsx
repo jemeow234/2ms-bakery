@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
           <div className="mb-8">
             <Link href="/" className="flex items-center gap-2 mb-6">
               <LogoMark className="w-14 h-14" priority />
-              <span className="font-serif text-2xl font-bold text-foreground">2M&apos;s Bakery</span>
+              <span className="text-2xl font-bold tracking-tight text-foreground">2M&apos;s Bakery</span>
             </Link>
             <h1 className="font-serif text-3xl font-bold text-foreground mb-2">
               Forgot Password
