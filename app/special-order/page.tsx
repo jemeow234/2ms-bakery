@@ -60,7 +60,7 @@ export default function SpecialOrderPage() {
         <h1 className="font-serif text-3xl font-bold text-foreground mb-2">Special Orders</h1>
         <p className="text-muted-foreground mb-8">
           Planning a party, event or office treat? Order in bulk — minimum of {SPECIAL_ORDER_MINIMUM} pieces,
-          at least {SPECIAL_ORDER_LEAD_DAYS} days ahead. We&apos;ll get back to you to confirm the price and
+          at least {SPECIAL_ORDER_LEAD_DAYS} day ahead. We&apos;ll get back to you to confirm the price and
           availability before anything is baked.
         </p>
 
