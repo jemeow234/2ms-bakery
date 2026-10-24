@@ -12,7 +12,7 @@ export const SPECIAL_ORDER_MINIMUM = SPECIAL_ORDER_PRESETS[0]
 export const SPECIAL_ORDER_MAXIMUM = 10000
 
 /** Bulk batches are baked to order, so they need this many days' notice. */
-export const SPECIAL_ORDER_LEAD_DAYS = 3
+export const SPECIAL_ORDER_LEAD_DAYS = 1
 
 /** The earliest date a special order can be needed for, as 'YYYY-MM-DD'. */
 export function earliestSpecialOrderDate(now: Date = new Date()): string {
