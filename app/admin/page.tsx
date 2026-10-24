@@ -57,12 +57,12 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-3xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Welcome back! Here&apos;s your bakery overview.</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {stats.map(stat => (
           <Card key={stat.title} className="border-border hover:border-primary/30 transition-colors">
             <CardHeader className="flex flex-row items-center justify-between pb-2">

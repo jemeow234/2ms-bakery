@@ -81,12 +81,12 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-bold text-foreground">Orders</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Orders</h1>
         <p className="text-muted-foreground mt-1">Manage and track all orders</p>
       </div>
 
       {/* Stats */}
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-border">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-orange-600 flex items-center gap-2">
@@ -179,13 +179,13 @@ export default function OrdersPage() {
             <table className="w-full">
               <thead className="bg-secondary">
                 <tr>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Order ID</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Customer</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Items</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Total</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="text-right py-4 px-6 text-sm font-medium text-muted-foreground">Actions</th>
+                  <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Order ID</th>
+                  <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Customer</th>
+                  <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Items</th>
+                  <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Total</th>
+                  <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Status</th>
+                  <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Date</th>
+                  <th className="text-right py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -193,24 +193,24 @@ export default function OrdersPage() {
                   const StatusIcon = statusConfig[order.status].icon
                   return (
                     <tr key={order.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <span className="font-mono font-medium text-foreground">{order.id}</span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <div>
                           <p className="font-medium text-foreground">{order.customerName}</p>
                           <p className="text-sm text-muted-foreground">{order.customerEmail || 'Walk-in'}</p>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <span className="text-muted-foreground">
                           {order.items.reduce((sum, item) => sum + item.quantity, 0)} items
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <span className="font-medium text-foreground">₱{order.total.toFixed(2)}</span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <span className={cn(
                           'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium',
                           statusConfig[order.status].color
@@ -219,7 +219,7 @@ export default function OrdersPage() {
                           {statusConfig[order.status].label}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <span className="text-muted-foreground text-sm">
                           {new Date(order.createdAt).toLocaleDateString()}
                         </span>
@@ -229,7 +229,7 @@ export default function OrdersPage() {
                           </p>
                         )}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"

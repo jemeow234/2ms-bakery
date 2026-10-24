@@ -149,18 +149,20 @@ export default function POSPage() {
     )
   }
 
+  // Side by side with their own scroll areas on large screens; stacked, with
+  // the order below the products, on phones and tablets.
   return (
-    <div className="flex gap-6 h-[calc(100vh-8rem)]">
+    <div className="flex flex-col lg:flex-row gap-6 pb-20 lg:pb-0 lg:h-[calc(100vh-8rem)]">
       {/* Products Section */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="mb-6">
-          <h1 className="font-serif text-3xl font-bold text-foreground mb-1">POS System</h1>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground mb-1">POS System</h1>
           <p className="text-muted-foreground">Quick sale terminal for in-store purchases</p>
         </div>
 
         {/* Search & Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="flex flex-wrap gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="relative flex-1 min-w-full sm:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
@@ -190,8 +192,8 @@ export default function POSPage() {
         </div>
 
         {/* Products Grid */}
-        <div className="flex-1 overflow-y-auto pr-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="flex-1 lg:overflow-y-auto lg:pr-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {filteredProducts.map(listing => {
               const { product, variants } = listing
               const hasOptions = variants.length > 1
@@ -199,7 +201,7 @@ export default function POSPage() {
               <button
                 key={listing.key}
                 onClick={() => (hasOptions ? setOptionsFor(listing) : addToCart(product))}
-                className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/50 hover:shadow-lg transition-all group"
+                className="bg-card border border-border rounded-xl p-3 sm:p-4 text-left hover:border-primary/50 hover:shadow-lg transition-all group"
               >
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-3 relative">
                   {imageErrors[product.id] ? (
@@ -251,7 +253,7 @@ export default function POSPage() {
       </div>
 
       {/* Cart Section */}
-      <Card className="w-96 flex flex-col border-border flex-shrink-0">
+      <Card id="pos-order" className="w-full lg:w-96 flex flex-col border-border flex-shrink-0 scroll-mt-20">
         <CardHeader className="pb-4">
           <CardTitle className="text-foreground">Current Order</CardTitle>
         </CardHeader>
@@ -270,7 +272,7 @@ export default function POSPage() {
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+          <div className="flex-1 lg:overflow-y-auto space-y-3 mb-4">
             {cart.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 No items in cart
@@ -292,20 +294,20 @@ export default function POSPage() {
                   <div className="flex items-center gap-2">
                     <button aria-label={`Remove one ${item.product.name}`}
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="p-1 hover:bg-card rounded transition-colors"
+                      className="p-2 lg:p-1 hover:bg-card rounded transition-colors"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
                     <span className="w-8 text-center font-medium">{item.quantity}</span>
                     <button aria-label={`Add one ${item.product.name}`}
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                      className="p-1 hover:bg-card rounded transition-colors"
+                      className="p-2 lg:p-1 hover:bg-card rounded transition-colors"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                     <button aria-label={`Remove ${item.product.name} from the sale`}
                       onClick={() => removeFromCart(item.product.id)}
-                      className="p-1 hover:bg-destructive/10 text-destructive rounded transition-colors ml-2"
+                      className="p-2 lg:p-1 hover:bg-destructive/10 text-destructive rounded transition-colors ml-1 lg:ml-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -371,6 +373,19 @@ export default function POSPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Below lg the order is under the products, so keep a shortcut to it on screen. */}
+      {cart.length > 0 && (
+        <button
+          onClick={() => document.getElementById('pos-order')?.scrollIntoView({ behavior: 'smooth' })}
+          className="lg:hidden fixed bottom-4 inset-x-4 z-30 flex items-center justify-between gap-3 rounded-xl bg-primary px-4 py-3 text-primary-foreground shadow-xl"
+        >
+          <span className="font-medium">
+            View order · {cart.reduce((sum, item) => sum + item.quantity, 0)} items
+          </span>
+          <span className="font-bold">₱{totalPrice.toFixed(2)}</span>
+        </button>
+      )}
     </div>
   )
 }

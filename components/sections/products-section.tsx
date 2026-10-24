@@ -64,7 +64,7 @@ export function ProductsSection({ initialProducts = [] }: { initialProducts?: Pr
   }, [])
 
   return (
-    <section id="products" ref={sectionRef} className="py-24 bg-secondary/30 relative">
+    <section id="products" ref={sectionRef} className="py-16 sm:py-24 bg-secondary/30 relative">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <span
@@ -117,7 +117,8 @@ export function ProductsSection({ initialProducts = [] }: { initialProducts?: Pr
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {/* Two columns even on phones, so the menu isn't one very long scroll. */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
           {visibleProducts.map(({ key, product, variants }, index) => (
             <div
               key={key}

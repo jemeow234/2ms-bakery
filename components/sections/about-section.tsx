@@ -51,13 +51,13 @@ export function AboutSection() {
   }, [])
 
   return (
-    <section id="about" ref={sectionRef} className="py-24 bg-card relative overflow-hidden">
+    <section id="about" ref={sectionRef} className="py-16 sm:py-24 bg-card relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/5 rounded-full translate-x-1/3 translate-y-1/3" />
 
       <div className="container mx-auto px-4 relative">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <span
             className={cn(
               'inline-block text-primary font-medium mb-4 transition-all duration-700',
@@ -90,7 +90,7 @@ export function AboutSection() {
         {/* Stats */}
         <div
           className={cn(
-            'grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-20 transition-all duration-700 delay-300',
+            'grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mb-12 sm:mb-20 transition-all duration-700 delay-300',
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           )}
         >
@@ -109,23 +109,25 @@ export function AboutSection() {
         </div>
 
         {/* Values */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-8">
           {values.map((value, index) => (
             <div
               key={value.title}
               className={cn(
-                'group p-8 rounded-2xl bg-background border border-border hover:border-primary/30 hover:shadow-xl transition-all duration-500',
+                'group flex items-start gap-4 md:block p-5 sm:p-8 rounded-2xl bg-background border border-border hover:border-primary/30 hover:shadow-xl transition-all duration-500',
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               )}
               style={{ transitionDelay: `${600 + index * 150}ms` }}
             >
-              <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-                <value.icon className="w-8 h-8" strokeWidth={1.5} />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center md:mb-6 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+                <value.icon className="w-6 h-6 sm:w-8 sm:h-8" strokeWidth={1.5} />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">
-                {value.title}
-              </h3>
-              <p className="text-muted-foreground text-pretty">{value.description}</p>
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1 sm:mb-3">
+                  {value.title}
+                </h3>
+                <p className="text-muted-foreground text-pretty">{value.description}</p>
+              </div>
             </div>
           ))}
         </div>

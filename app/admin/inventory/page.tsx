@@ -227,7 +227,7 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-foreground">Inventory Management</h1>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Inventory Management</h1>
           <p className="text-muted-foreground mt-1">Manage your products and stock levels</p>
         </div>
         <Dialog
@@ -441,18 +441,18 @@ export default function InventoryPage() {
           <table className="w-full">
             <thead className="bg-secondary">
               <tr>
-                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Product</th>
-                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Category</th>
-                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Price</th>
-                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Stock</th>
-                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">Status</th>
-                <th className="text-right py-4 px-6 text-sm font-medium text-muted-foreground">Actions</th>
+                <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Product</th>
+                <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Category</th>
+                <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Price</th>
+                <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Stock</th>
+                <th className="text-left py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-right py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredProducts.map(product => (
                 <tr key={product.id} className="border-b border-border last:border-0 hover:bg-secondary/50">
-                  <td className="py-4 px-6">
+                  <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary relative flex-shrink-0">
                         {imageErrors[product.id] ? (
@@ -478,16 +478,16 @@ export default function InventoryPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <span className="text-muted-foreground">{formatCategory(product.category)}</span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <span className="font-medium text-foreground">₱{product.price.toFixed(2)}</span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <span className="font-medium text-foreground">{product.stock}</span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <span
                       className={cn(
                         'px-3 py-1 rounded-full text-xs font-medium',
@@ -501,7 +501,7 @@ export default function InventoryPage() {
                       {product.stock === 0 ? 'Out of Stock' : product.stock <= 5 ? 'Low Stock' : 'In Stock'}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
+                  <td className="py-3 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"

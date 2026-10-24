@@ -7,4 +7,4 @@ export const SHOP_EMAIL = 'trupazette05@gmail.com'
  * Where "Send us a Message" submissions are delivered when CONTACT_TO_EMAIL
  * isn't set for the deployment.
  */
-export const CONTACT_INBOX_DEFAULT = 'dunwellaranas@gmail.com'
+export const CONTACT_INBOX_DEFAULT = '2msbakery.admin@gmail.com'

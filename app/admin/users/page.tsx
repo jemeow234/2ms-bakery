@@ -123,7 +123,7 @@ export default function UserManagementPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-bold text-foreground">User Management</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">User Management</h1>
         <p className="text-muted-foreground mt-1">View and manage registered users</p>
       </div>
 

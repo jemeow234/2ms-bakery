@@ -66,7 +66,7 @@ export default function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-bold text-foreground">Announcements & Ads</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Announcements & Ads</h1>
         <p className="text-muted-foreground mt-1">Post announcements and advertisements to users</p>
       </div>
 

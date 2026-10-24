@@ -34,7 +34,7 @@ export function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center overflow-hidden pt-28 pb-16 lg:pt-24 lg:pb-0"
+      className="relative lg:min-h-screen flex items-center overflow-hidden pt-24 pb-16 sm:pt-28 lg:pt-24 lg:pb-0"
     >
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-secondary via-background to-accent/20" />
@@ -46,7 +46,7 @@ export function HeroSection() {
       />
 
       <div ref={heroRef} className="relative z-10 container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <div className="grid lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-8 items-center">
           {/* Text */}
           <div className="text-center lg:text-left">
             <div className="animate-fade-in">
@@ -61,12 +61,12 @@ export function HeroSection() {
               <span className="text-primary">Every Morning</span>
             </h1>
 
-            <p className="text-muted-foreground text-lg md:text-xl max-w-lg mx-auto lg:mx-0 mb-10 animate-fade-in text-pretty">
+            <p className="text-muted-foreground text-lg md:text-xl max-w-lg mx-auto lg:mx-0 mb-8 sm:mb-10 animate-fade-in text-pretty">
               Experience the warmth of handcrafted breads and pastries made with
               traditional recipes and the finest ingredients.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 animate-slide-up">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4 max-w-xs sm:max-w-none mx-auto lg:mx-0 animate-slide-up">
               <Button
                 size="lg"
                 onClick={scrollToFeatured}
@@ -88,7 +88,7 @@ export function HeroSection() {
           {/* Hero photo */}
           <div className="relative animate-fade-in">
             <div className="absolute -inset-6 bg-accent/25 rounded-[2.5rem] rotate-3 hidden sm:block" />
-            <div className="relative aspect-[4/5] sm:aspect-square lg:aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
+            <div className="relative aspect-[4/3] sm:aspect-square lg:aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
               <Image
                 src="/images/bicho.jpg"
                 alt="Freshly fried bicho rolled in sugar, on a bronze tray"
@@ -100,7 +100,7 @@ export function HeroSection() {
             </div>
             <LogoMark
               priority
-              className="absolute -bottom-5 left-4 sm:-bottom-6 sm:-left-6 w-24 h-24 sm:w-32 sm:h-32 ring-4 ring-background shadow-xl"
+              className="absolute -bottom-5 left-4 sm:-bottom-6 sm:-left-6 w-20 h-20 sm:w-32 sm:h-32 ring-4 ring-background shadow-xl"
             />
           </div>
         </div>

@@ -31,11 +31,11 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-foreground text-background py-16">
+    <footer className="bg-foreground text-background py-12 sm:py-16">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+        <div className="grid grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-10 sm:gap-12 mb-10 sm:mb-12">
           {/* Brand */}
-          <div className="lg:col-span-2">
+          <div className="col-span-3 lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
               <LogoMark className="w-12 h-12" />
               <span className="text-xl font-bold">2M&apos;s Bakery</span>
@@ -55,7 +55,7 @@ export function Footer() {
                   <a
                     href={link.href}
                     onClick={e => handleShopLinkClick(e, link.category)}
-                    className="text-background/70 hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-background/70 hover:text-primary transition-colors"
                   >
                     {link.label}
                   </a>
@@ -71,7 +71,7 @@ export function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-background/70 hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-background/70 hover:text-primary transition-colors"
                   >
                     {link.label}
                   </a>
@@ -87,7 +87,7 @@ export function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-background/70 hover:text-primary transition-colors"
+                    className="text-sm sm:text-base text-background/70 hover:text-primary transition-colors"
                   >
                     {link.label}
                   </a>

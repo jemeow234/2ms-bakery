@@ -199,7 +199,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
   }
 
   return (
-    <div className="group bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
+    <div className="group h-full flex flex-col bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/30 transition-all duration-500 hover:shadow-2xl sm:hover:-translate-y-2">
       <div className="relative overflow-hidden aspect-square">
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         {imageError ? (
@@ -211,66 +211,67 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
             src={product.image}
             alt={product.name}
             fill
-            sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, 50vw"
             className="object-cover group-hover:scale-110 transition-transform duration-700"
             onError={() => setImageError(true)}
           />
         )}
         {product.featured && (
-          <span className="absolute top-4 left-4 z-20 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-full">
+          <span className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 px-2 sm:px-3 py-0.5 sm:py-1 bg-primary text-primary-foreground text-[10px] sm:text-xs font-medium rounded-full">
             Featured
           </span>
         )}
         {product.stock <= 5 && product.stock > 0 && (
-          <span className="absolute top-4 right-4 z-20 px-3 py-1 bg-accent text-accent-foreground text-xs font-medium rounded-full">
+          <span className="absolute bottom-2 right-2 sm:bottom-auto sm:top-4 sm:right-4 z-20 px-2 sm:px-3 py-0.5 sm:py-1 bg-accent text-accent-foreground text-[10px] sm:text-xs font-medium rounded-full">
             Only {product.stock} left
           </span>
         )}
         {product.stock === 0 && (
-          <span className="absolute top-4 right-4 z-20 px-3 py-1 bg-destructive text-destructive-foreground text-xs font-medium rounded-full">
+          <span className="absolute bottom-2 right-2 sm:bottom-auto sm:top-4 sm:right-4 z-20 px-2 sm:px-3 py-0.5 sm:py-1 bg-destructive text-destructive-foreground text-[10px] sm:text-xs font-medium rounded-full">
             Out of Stock
           </span>
         )}
       </div>
 
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-2">
-          <span className="text-xs uppercase tracking-wider text-primary font-medium">
+      <div className="flex-1 flex flex-col p-3 sm:p-6">
+        <div className="flex flex-col-reverse items-start gap-1 sm:flex-row sm:justify-between sm:gap-2 mb-1 sm:mb-2">
+          <span className="text-[10px] sm:text-xs uppercase tracking-wider text-primary font-medium">
             {formatCategory(product.category)}
           </span>
-          <span className="font-serif text-xl font-bold text-primary">
+          <span className="font-serif text-lg sm:text-xl font-bold text-primary whitespace-nowrap">
             {priceLabel}
           </span>
         </div>
 
-        <h3 className="font-serif text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+        <h3 className="font-serif text-base sm:text-xl font-semibold text-foreground leading-snug mb-1 sm:mb-2 group-hover:text-primary transition-colors">
           {product.name}
         </h3>
 
-        <p className="text-muted-foreground text-sm mb-2 line-clamp-2 text-pretty">
+        <p className="hidden sm:block text-muted-foreground text-sm mb-2 line-clamp-2 text-pretty">
           {product.description}
         </p>
 
-        <p className={cn('text-sm font-medium mb-4', product.stock === 0 ? 'text-destructive' : 'text-muted-foreground')}>
+        <p className={cn('text-xs sm:text-sm font-medium mb-3 sm:mb-4', product.stock === 0 ? 'text-destructive' : 'text-muted-foreground')}>
           {stockLabel(product.stock)}
         </p>
 
-        <div className="flex items-center gap-3">
+        {/* Pinned to the bottom so buttons line up across a row of cards. */}
+        <div className="mt-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           {!hasOptions && (
-            <div className="flex items-center border border-border rounded-lg">
+            <div className="flex items-center justify-between border border-border rounded-lg">
               <button aria-label="Decrease quantity"
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="p-2 hover:bg-secondary transition-colors rounded-l-lg"
+                className="p-2.5 sm:p-2 hover:bg-secondary transition-colors rounded-l-lg"
                 disabled={product.stock === 0}
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <span className="px-4 py-2 font-medium min-w-[3rem] text-center">
+              <span className="px-2 sm:px-4 py-2 font-medium min-w-[2.5rem] sm:min-w-[3rem] text-center">
                 {quantity}
               </span>
               <button aria-label="Increase quantity"
                 onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-                className="p-2 hover:bg-secondary transition-colors rounded-r-lg"
+                className="p-2.5 sm:p-2 hover:bg-secondary transition-colors rounded-r-lg"
                 disabled={product.stock === 0}
               >
                 <Plus className="h-4 w-4" />
@@ -282,7 +283,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
             onClick={handleAddToCart}
             disabled={product.stock === 0 || isAdded}
             className={cn(
-              'flex-1 transition-all duration-300',
+              'flex-1 px-3 sm:px-4 transition-all duration-300',
               isAdded
                 ? 'bg-green-600 hover:bg-green-600'
                 : 'bg-primary hover:bg-primary/90'
@@ -296,7 +297,15 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
             ) : (
               <>
                 <ShoppingBag className="h-4 w-4 mr-2" />
-                {hasOptions ? 'Choose Option' : 'Add to Cart'}
+                {hasOptions ? (
+                  <>
+                    {/* "Choose Option" doesn't fit a half-width phone card. */}
+                    <span className="sm:hidden">Options</span>
+                    <span className="hidden sm:inline">Choose Option</span>
+                  </>
+                ) : (
+                  'Add to Cart'
+                )}
               </>
             )}
           </Button>

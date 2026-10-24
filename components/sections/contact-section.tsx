@@ -88,7 +88,7 @@ export function ContactSection() {
   }
 
   return (
-    <section id="contact" ref={sectionRef} className="py-24 bg-card relative overflow-hidden">
+    <section id="contact" ref={sectionRef} className="py-16 sm:py-24 bg-card relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full -translate-x-1/2 translate-y-1/2" />
@@ -122,7 +122,7 @@ export function ContactSection() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 max-w-6xl mx-auto">
           {/* Contact Info */}
           <div
             className={cn(
@@ -130,11 +130,11 @@ export function ContactSection() {
               isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
             )}
           >
-            <div className="grid sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6">
               {contactInfo.map((info, index) => (
                 <div
                   key={info.title}
-                  className="p-6 bg-background rounded-2xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                  className="min-w-0 p-4 sm:p-6 bg-background rounded-2xl border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
                   style={{ transitionDelay: `${400 + index * 100}ms` }}
                 >
                   {info.href ? (
@@ -144,12 +144,12 @@ export function ContactSection() {
                       rel="noopener noreferrer"
                       aria-label="Open 2M's Bakery in Google Maps"
                       title="Open in Google Maps"
-                      className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4 transition-colors hover:bg-primary hover:text-primary-foreground"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 sm:mb-4 transition-colors hover:bg-primary hover:text-primary-foreground"
                     >
                       {info.icon}
                     </a>
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 sm:mb-4">
                       {info.icon}
                     </div>
                   )}
@@ -157,7 +157,7 @@ export function ContactSection() {
                     {info.title}
                   </h3>
                   {info.details.map((detail, i) => (
-                    <p key={i} className="text-muted-foreground text-sm">
+                    <p key={i} className="text-muted-foreground text-xs sm:text-sm break-words">
                       {detail}
                     </p>
                   ))}
@@ -176,7 +176,7 @@ export function ContactSection() {
               />
               {/* Only shades the bottom strip, and lets clicks through so the map stays draggable. */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/80 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-6 text-white flex items-center gap-3">
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white flex items-center gap-3">
                 <a
                   href={BAKERY_MAP_URL}
                   target="_blank"
@@ -202,7 +202,7 @@ export function ContactSection() {
               isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
             )}
           >
-            <form onSubmit={handleSubmit} className="p-8 bg-background rounded-2xl border border-border">
+            <form onSubmit={handleSubmit} className="p-5 sm:p-8 bg-background rounded-2xl border border-border">
               <h3 className="font-serif text-2xl font-semibold text-foreground mb-6">
                 Send us a Message
               </h3>

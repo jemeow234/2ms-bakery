@@ -22,6 +22,7 @@ const navLinks = [
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
+  const [menuOpen, setMenuOpen] = useState(false)
   const { totalItems } = useCart()
   const { user, logout } = useAuth()
 
@@ -47,6 +48,7 @@ export function Navbar() {
   }, [])
 
   const scrollToSection = (href: string) => {
+    setMenuOpen(false)
     const element = document.getElementById(href.replace('#', ''))
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' })
@@ -59,7 +61,7 @@ export function Navbar() {
         'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
         isScrolled
           ? 'bg-card/95 backdrop-blur-md shadow-lg py-3'
-          : 'bg-transparent py-6'
+          : 'bg-transparent py-4 sm:py-6'
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
@@ -102,7 +104,7 @@ export function Navbar() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           <NotificationCenter />
 
           <Button
@@ -152,7 +154,7 @@ export function Navbar() {
           )}
 
           {/* Mobile Menu */}
-          <Sheet>
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
               <Button aria-label="Open menu" variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
@@ -175,29 +177,32 @@ export function Navbar() {
                     {link.label}
                   </button>
                 ))}
-                <Link href="/special-order" className="text-lg font-medium text-foreground hover:text-primary">
+                <Link href="/special-order" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
                   Special Order
                 </Link>
                 <hr className="border-border" />
                 {user ? (
                   <>
                     {user.role === 'admin' && (
-                      <Link href="/admin" className="text-lg font-medium text-foreground hover:text-primary">
+                      <Link href="/admin" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
                         Admin Dashboard
                       </Link>
                     )}
-                    <Link href="/orders" className="text-lg font-medium text-foreground hover:text-primary">
+                    <Link href="/orders" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
                       My Orders
                     </Link>
                     <button
-                      onClick={logout}
+                      onClick={() => {
+                        setMenuOpen(false)
+                        logout()
+                      }}
                       className="text-lg font-medium text-left text-foreground hover:text-primary"
                     >
                       Logout
                     </button>
                   </>
                 ) : (
-                  <Link href="/login" className="text-lg font-medium text-foreground hover:text-primary">
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className="text-lg font-medium text-foreground hover:text-primary">
                     Login
                   </Link>
                 )}

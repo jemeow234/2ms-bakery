@@ -133,7 +133,7 @@ export default function SpecialOrdersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-foreground">Special Orders</h1>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground">Special Orders</h1>
           <p className="text-muted-foreground mt-1">Bulk order requests from customers</p>
         </div>
         <Button variant="outline" onClick={loadOrders} disabled={isLoading}>
