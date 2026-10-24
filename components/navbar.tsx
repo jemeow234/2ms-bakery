@@ -93,6 +93,12 @@ export function Navbar() {
               {link.label}
             </button>
           ))}
+          <Link
+            href="/special-order"
+            className="px-4 py-2 rounded-full text-sm font-medium transition-colors duration-300 text-foreground hover:bg-primary/5 hover:text-primary"
+          >
+            Special Order
+          </Link>
         </div>
 
         {/* Actions */}
@@ -169,6 +175,9 @@ export function Navbar() {
                     {link.label}
                   </button>
                 ))}
+                <Link href="/special-order" className="text-lg font-medium text-foreground hover:text-primary">
+                  Special Order
+                </Link>
                 <hr className="border-border" />
                 {user ? (
                   <>
