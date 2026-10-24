@@ -19,6 +19,8 @@ import {
   ShoppingBag,
 } from 'lucide-react'
 import { cn, PRODUCT_CATEGORIES } from '@/lib/utils'
+import { groupProductVariants, type ProductListing } from '@/lib/product-variants'
+import { ProductVariantModal } from '@/components/product-variant-modal'
 import { toast } from 'sonner'
 
 const categories = [{ id: 'all', label: 'All' }, ...PRODUCT_CATEGORIES]
@@ -33,32 +35,38 @@ export default function POSPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
+  const [optionsFor, setOptionsFor] = useState<ProductListing | null>(null)
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase())
-    const matchesCategory = activeCategory === 'all' || product.category === activeCategory
-    return matchesSearch && matchesCategory && product.stock > 0
-  })
+  // Sizes like "Loaf Bread (Small)" / "(Large)" share one card with an option
+  // picker, the same as on the storefront.
+  const filteredProducts = groupProductVariants(
+    products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase())
+      const matchesCategory = activeCategory === 'all' || product.category === activeCategory
+      return matchesSearch && matchesCategory
+    })
+  ).filter(listing => listing.product.stock > 0)
 
   const handleImageError = (productId: string) => {
     setImageErrors(prev => ({ ...prev, [productId]: true }))
   }
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, quantity = 1) => {
     const existing = cart.find(item => item.product.id === product.id)
     if (existing) {
-      if (existing.quantity >= product.stock) {
+      if (existing.quantity + quantity > product.stock) {
         toast.error('Not enough stock')
-        return
+        return false
       }
       setCart(cart.map(item =>
         item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: item.quantity + quantity }
           : item
       ))
     } else {
-      setCart([...cart, { product, quantity: 1 }])
+      setCart([...cart, { product, quantity }])
     }
+    return true
   }
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -184,10 +192,13 @@ export default function POSPage() {
         {/* Products Grid */}
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredProducts.map(product => (
+            {filteredProducts.map(listing => {
+              const { product, variants } = listing
+              const hasOptions = variants.length > 1
+              return (
               <button
-                key={product.id}
-                onClick={() => addToCart(product)}
+                key={listing.key}
+                onClick={() => (hasOptions ? setOptionsFor(listing) : addToCart(product))}
                 className="bg-card border border-border rounded-xl p-4 text-left hover:border-primary/50 hover:shadow-lg transition-all group"
               >
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary mb-3 relative">
@@ -212,10 +223,24 @@ export default function POSPage() {
                   )}
                 </div>
                 <h3 className="font-medium text-foreground truncate">{product.name}</h3>
-                <p className="text-primary font-bold">₱{product.price.toFixed(2)}</p>
+                <p className="text-primary font-bold">
+                  {hasOptions ? 'From ' : ''}₱{product.price.toFixed(2)}
+                </p>
               </button>
-            ))}
+              )
+            })}
           </div>
+
+          {optionsFor && (
+            <ProductVariantModal
+              open
+              onOpenChange={open => !open && setOptionsFor(null)}
+              name={optionsFor.product.name}
+              image={optionsFor.product.image}
+              variants={optionsFor.variants}
+              onAdd={addToCart}
+            />
+          )}
 
           {filteredProducts.length === 0 && (
             <div className="text-center py-12">

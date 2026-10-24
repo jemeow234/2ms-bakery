@@ -23,6 +23,9 @@ interface ProductVariantModalProps {
   name: string
   image: string
   variants: Product[]
+  // Where the chosen option goes. Defaults to the customer's cart; the POS
+  // passes its own. Return false to keep the picker open (e.g. not enough stock).
+  onAdd?: (variant: Product, quantity: number) => boolean | void
 }
 
 export function ProductVariantModal({ open, onOpenChange, ...picker }: ProductVariantModalProps) {
@@ -40,6 +43,7 @@ function VariantPicker({
   name,
   image,
   variants,
+  onAdd,
   onAdded,
 }: Omit<ProductVariantModalProps, 'open' | 'onOpenChange'> & { onAdded: () => void }) {
   // Start on the first option that can actually be bought.
@@ -61,6 +65,10 @@ function VariantPicker({
     if (!selected) return
     if (selected.stock < quantity) {
       toast.error('Not enough stock available')
+      return
+    }
+    if (onAdd) {
+      if (onAdd(selected, quantity) !== false) onAdded()
       return
     }
     addToCart(selected, quantity)
