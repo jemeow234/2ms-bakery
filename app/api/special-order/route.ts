@@ -45,6 +45,15 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // The price comes from the menu, not the form. "Other" items have none.
+  const { data: menuItem } = await supabase
+    .from('products')
+    .select('price')
+    .eq('name', order.product)
+    .limit(1)
+    .maybeSingle()
+  const unitPrice = menuItem ? Number(menuItem.price) : null
+
   // Saved first so the request shows up in the admin panel even if the email
   // can't be sent.
   const { error: saveError } = await supabase.from('special_orders').insert({
@@ -54,6 +63,7 @@ export async function POST(req: NextRequest) {
     phone: order.phone,
     product: order.product,
     quantity: order.quantity,
+    unit_price: unitPrice,
     needed_by: order.neededBy,
     fulfillment: order.fulfillment,
     notes: order.notes,
@@ -79,6 +89,12 @@ export async function POST(req: NextRequest) {
     ['Phone', order.phone],
     ['Item', order.product],
     ['Quantity', `${order.quantity} pcs`],
+    ...(unitPrice !== null
+      ? ([
+          ['Price per piece', `₱${unitPrice.toFixed(2)}`],
+          ['Estimated total', `₱${(unitPrice * order.quantity).toFixed(2)}`],
+        ] as [string, string][])
+      : []),
     ['Needed by', order.neededBy],
     ['Pick-up / delivery', fulfillment],
   ]

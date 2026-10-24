@@ -35,6 +35,8 @@ interface SpecialOrder {
   phone: string
   product: string
   quantity: number
+  // Numeric columns can arrive as strings; null for items not on the menu.
+  unit_price: number | string | null
   needed_by: string
   fulfillment: 'pickup' | 'delivery'
   notes: string
@@ -215,6 +217,19 @@ export default function SpecialOrdersPage() {
                     </h3>
 
                     <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      <p>
+                        <span className="text-muted-foreground">Estimated total: </span>
+                        {order.unit_price === null ? (
+                          <span className="text-muted-foreground">To be quoted</span>
+                        ) : (
+                          <span className="font-medium text-foreground">
+                            ₱{(Number(order.unit_price) * order.quantity).toFixed(2)}
+                            <span className="text-muted-foreground font-normal">
+                              {' '}(₱{Number(order.unit_price).toFixed(2)}/pc)
+                            </span>
+                          </span>
+                        )}
+                      </p>
                       <p>
                         <span className="text-muted-foreground">Needed by: </span>
                         <span className="font-medium text-primary">{formatNeededBy(order.needed_by)}</span>

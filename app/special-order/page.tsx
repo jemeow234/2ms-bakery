@@ -107,6 +107,12 @@ function SpecialOrderForm({ user }: { user: User }) {
   // server re-checks the date either way.
   const earliestDate = useSyncExternalStore(noSubscription, () => earliestSpecialOrderDate(), () => undefined)
   const isOtherQuantity = form.quantityChoice === OTHER_QUANTITY
+  const quantity = Number(isOtherQuantity ? form.otherQuantity : form.quantityChoice)
+  const selectedProduct = products.find(product => product.name === form.product)
+  const estimatedTotal =
+    selectedProduct && Number.isInteger(quantity) && quantity >= SPECIAL_ORDER_MINIMUM
+      ? selectedProduct.price * quantity
+      : null
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -134,7 +140,7 @@ function SpecialOrderForm({ user }: { user: User }) {
           email: form.email,
           phone: form.phone,
           product: form.product,
-          quantity: Number(isOtherQuantity ? form.otherQuantity : form.quantityChoice),
+          quantity,
           neededBy: form.neededBy,
           fulfillment: form.fulfillment,
           notes: form.notes,
@@ -183,7 +189,7 @@ function SpecialOrderForm({ user }: { user: User }) {
             <SelectContent>
               {products.map(product => (
                 <SelectItem key={product.id} value={product.name}>
-                  {product.name}
+                  {product.name} — ₱{product.price.toFixed(2)}/pc
                 </SelectItem>
               ))}
               <SelectItem value={OTHER_PRODUCT}>{OTHER_PRODUCT}</SelectItem>
@@ -242,6 +248,22 @@ function SpecialOrderForm({ user }: { user: User }) {
             </label>
           </RadioGroup>
         </div>
+
+        {form.product && (
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-secondary" aria-live="polite">
+            <div>
+              <p className="text-sm font-medium text-foreground">Estimated total</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedProduct
+                  ? `₱${selectedProduct.price.toFixed(2)} per piece · final price confirmed by the bakery`
+                  : 'We’ll quote you a price for this item'}
+              </p>
+            </div>
+            <p className="text-xl font-bold text-primary whitespace-nowrap">
+              {estimatedTotal !== null ? `₱${estimatedTotal.toFixed(2)}` : '—'}
+            </p>
+          </div>
+        )}
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
