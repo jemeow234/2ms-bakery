@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { LogoMark } from '@/components/logo-mark'
 import { BAKERY_ORIGIN } from '@/lib/delivery'
-import { SHOP_EMAIL } from '@/lib/shop'
+import { SHOP_EMAIL, SHOP_PHONE } from '@/lib/shop'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const EFFECTIVE_DATE = 'September 26, 2026'
 const CONTACT_EMAIL = SHOP_EMAIL
-const CONTACT_PHONE = '+63 917 326 9434'
+const CONTACT_PHONE = SHOP_PHONE
 
 const sections = [
   {

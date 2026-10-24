@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { MapPin, Phone, Mail, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BAKERY_MAP_EMBED_URL, BAKERY_MAP_URL } from '@/lib/delivery'
-import { SHOP_EMAIL } from '@/lib/shop'
+import { SHOP_EMAIL, SHOP_PHONE } from '@/lib/shop'
 import { toast } from 'sonner'
 
 const contactInfo: { icon: React.ReactNode; title: string; details: string[]; href?: string }[] = [
@@ -20,7 +20,7 @@ const contactInfo: { icon: React.ReactNode; title: string; details: string[]; hr
   {
     icon: <Phone className="h-5 w-5" />,
     title: 'Call Us',
-    details: ['+63 917 326 9434'],
+    details: [SHOP_PHONE],
   },
   {
     icon: <Mail className="h-5 w-5" />,

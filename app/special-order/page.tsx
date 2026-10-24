@@ -18,6 +18,7 @@ import {
 import { LogoMark } from '@/components/logo-mark'
 import { useAuth } from '@/context/auth-context'
 import { useStore } from '@/context/store-context'
+import { SHOP_EMAIL, SHOP_PHONE } from '@/lib/shop'
 import {
   SPECIAL_ORDER_LEAD_DAYS,
   SPECIAL_ORDER_MAXIMUM,
@@ -164,7 +165,7 @@ function SpecialOrderForm({ user }: { user: User }) {
         <CheckCircle2 className="h-10 w-10 text-primary mx-auto mb-4" />
         <p className="text-foreground font-medium mb-1">Request sent!</p>
         <p className="text-sm text-muted-foreground mb-6">
-          We&apos;ll reach out to {form.email} or {form.phone} to confirm your order.
+          We&apos;ll reach out to confirm your order. Questions? Contact us at {SHOP_EMAIL} or {SHOP_PHONE}.
         </p>
         <Button asChild>
           <Link href="/">Back to the shop</Link>
