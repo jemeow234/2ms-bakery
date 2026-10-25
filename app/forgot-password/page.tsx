@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
@@ -10,14 +10,23 @@ import { Label } from '@/components/ui/label'
 import { ArrowLeft, Loader2, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { LogoMark } from '@/components/logo-mark'
+import { Captcha, TURNSTILE_SITE_KEY, type CaptchaHandle } from '@/components/captcha'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const captchaRef = useRef<CaptchaHandle>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error('Please complete the verification check')
+      return
+    }
+
     setIsLoading(true)
 
     const supabase = createClient()
@@ -31,9 +40,18 @@ export default function ForgotPasswordPage() {
     // Errors are intentionally not surfaced here: the confirmation message
     // below is shown regardless of outcome so we never reveal whether an
     // email address is registered.
-    await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${window.location.origin}/update-password`,
-})
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`,
+      captchaToken: captchaToken ?? undefined,
+    })
+    captchaRef.current?.reset()
+
+    // A failed CAPTCHA says nothing about the account, so it's safe to show.
+    if (error?.code === 'captcha_failed') {
+      toast.error('Verification failed. Please try again.')
+      setIsLoading(false)
+      return
+    }
 
     setIsLoading(false)
     setSubmitted(true)
@@ -89,6 +107,8 @@ export default function ForgotPasswordPage() {
                   className="mt-2 bg-secondary border-border"
                 />
               </div>
+
+              <Captcha ref={captchaRef} onToken={setCaptchaToken} />
 
               <Button
                 type="submit"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -13,6 +13,7 @@ import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, MIN_PASSWORD_LENGTH } from '@/lib/utils'
 import { LogoMark } from '@/components/logo-mark'
+import { Captcha, TURNSTILE_SITE_KEY, type CaptchaHandle } from '@/components/captcha'
 
 type AuthMode = 'login' | 'register'
 
@@ -35,6 +36,22 @@ export default function LoginPage() {
     confirmPassword: ''
   })
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
+  // One widget per form; switching modes unmounts it, which clears the token.
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const captchaRef = useRef<CaptchaHandle>(null)
+
+  const switchMode = (mode: AuthMode) => {
+    setCaptchaToken(null)
+    setAuthMode(mode)
+  }
+
+  const captchaPending = () => {
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      toast.error('Please complete the verification check')
+      return true
+    }
+    return false
+  }
 
   const { login, register } = useAuth()
   const router = useRouter()
@@ -48,9 +65,11 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (captchaPending()) return
     setIsLoading(true)
 
-    const result = await login(loginEmail, loginPassword)
+    const result = await login(loginEmail, loginPassword, captchaToken ?? undefined)
+    captchaRef.current?.reset()
 
     if (result.success) {
       toast.success('Welcome back!')
@@ -81,6 +100,8 @@ export default function LoginPage() {
       return
     }
 
+    if (captchaPending()) return
+
     setIsLoading(true)
 
     const result = await register({
@@ -88,13 +109,15 @@ export default function LoginPage() {
       email: registerData.email,
       phone: registerData.phone,
       address: registerData.address,
-      password: registerData.password
+      password: registerData.password,
+      captchaToken: captchaToken ?? undefined
     })
+    captchaRef.current?.reset()
 
     if (result.success) {
       if (result.needsEmailConfirmation) {
         toast.success('Account created! Check your email to confirm it before signing in.')
-        setAuthMode('login')
+        switchMode('login')
       } else {
         toast.success('Account created successfully! Welcome to 2M\'s Bakery!')
         router.push(nextPath() ?? '/')
@@ -138,7 +161,7 @@ export default function LoginPage() {
           <div className="flex rounded-lg bg-secondary p-1 mb-6">
             <button
               type="button"
-              onClick={() => setAuthMode('login')}
+              onClick={() => switchMode('login')}
               className={cn(
                 'flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all',
                 authMode === 'login'
@@ -150,7 +173,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => setAuthMode('register')}
+              onClick={() => switchMode('register')}
               className={cn(
                 'flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all',
                 authMode === 'register'
@@ -212,6 +235,8 @@ export default function LoginPage() {
                     Forgot Password?
                   </Link>
                 </div>
+
+                <Captcha ref={captchaRef} onToken={setCaptchaToken} />
 
                 <Button
                   type="submit"
@@ -356,6 +381,8 @@ export default function LoginPage() {
                   </span>
                 </Label>
               </div>
+
+              <Captcha ref={captchaRef} onToken={setCaptchaToken} />
 
               <Button
                 type="submit"

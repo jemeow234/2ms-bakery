@@ -11,6 +11,7 @@ interface RegisterData {
   phone: string
   address: string
   password: string
+  captchaToken?: string
 }
 
 interface AuthResult {
@@ -22,7 +23,7 @@ interface AuthResult {
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string) => Promise<AuthResult>
+  login: (email: string, password: string, captchaToken?: string) => Promise<AuthResult>
   register: (data: RegisterData) => Promise<AuthResult>
   logout: () => Promise<void>
   isLoading: boolean
@@ -125,13 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase])
 
-  const login = async (email: string, password: string): Promise<AuthResult> => {
+  const login = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
     if (!supabase) {
       return { success: false, error: 'Supabase not initialized' }
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
 
       if (error) {
         return { success: false, error: error.message }
@@ -167,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Without this, the confirmation link points at the project's
           // dashboard Site URL instead of the site the user signed up on.
           emailRedirectTo: `${window.location.origin}/`,
+          captchaToken: data.captchaToken,
           data: {
             name: data.name,
             phone: data.phone,
