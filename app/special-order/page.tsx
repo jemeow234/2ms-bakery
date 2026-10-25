@@ -111,7 +111,10 @@ function SpecialOrderForm({ user }: { user: User }) {
   const quantity = Number(isOtherQuantity ? form.otherQuantity : form.quantityChoice)
   const selectedProduct = products.find(product => product.name === form.product)
   const estimatedTotal =
-    selectedProduct && Number.isInteger(quantity) && quantity >= SPECIAL_ORDER_MINIMUM
+    selectedProduct &&
+    Number.isInteger(quantity) &&
+    quantity >= SPECIAL_ORDER_MINIMUM &&
+    quantity <= SPECIAL_ORDER_MAXIMUM
       ? selectedProduct.price * quantity
       : null
 
@@ -223,16 +226,21 @@ function SpecialOrderForm({ user }: { user: User }) {
                 <span className="font-medium text-foreground">{preset}</span>
               </label>
             ))}
-            <label
-              htmlFor="qty-others"
+            {/* The number box sits beside the label, not inside it: inside, some
+                browsers (Safari especially) pass a tap on the box to the radio,
+                which takes the focus and leaves the box impossible to type in. */}
+            <div
               className={cn(
-                'col-span-2 sm:col-span-4 flex flex-wrap items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all',
+                'col-span-2 sm:col-span-4 flex flex-wrap items-center gap-3 p-3 rounded-xl border-2 transition-all',
                 isOtherQuantity ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
               )}
             >
-              <RadioGroupItem value={OTHER_QUANTITY} id="qty-others" />
-              <span className="font-medium text-foreground">Others</span>
+              <label htmlFor="qty-others" className="flex items-center gap-3 cursor-pointer">
+                <RadioGroupItem value={OTHER_QUANTITY} id="qty-others" />
+                <span className="font-medium text-foreground">Others</span>
+              </label>
               <Input
+                id="qty-others-amount"
                 type="number"
                 inputMode="numeric"
                 aria-label="Number of pieces (please specify)"
@@ -244,9 +252,10 @@ function SpecialOrderForm({ user }: { user: User }) {
                 onFocus={() => setForm(s => ({ ...s, quantityChoice: OTHER_QUANTITY }))}
                 onChange={e => setForm(s => ({ ...s, quantityChoice: OTHER_QUANTITY, otherQuantity: e.target.value }))}
                 required={isOtherQuantity}
+                onKeyDown={e => e.stopPropagation()}
                 className="flex-1 min-w-48 bg-secondary"
               />
-            </label>
+            </div>
           </RadioGroup>
         </div>
 
@@ -255,9 +264,13 @@ function SpecialOrderForm({ user }: { user: User }) {
             <div>
               <p className="text-sm font-medium text-foreground">Estimated total</p>
               <p className="text-xs text-muted-foreground">
-                {selectedProduct
-                  ? `₱${selectedProduct.price.toFixed(2)} per piece · final price confirmed by the bakery`
-                  : 'We’ll quote you a price for this item'}
+                {!selectedProduct
+                  ? 'We’ll quote you a price for this item'
+                  : estimatedTotal !== null
+                    ? `${quantity} × ₱${selectedProduct.price.toFixed(2)} · final price confirmed by the bakery`
+                    : isOtherQuantity
+                      ? `₱${selectedProduct.price.toFixed(2)} per piece · enter ${SPECIAL_ORDER_MINIMUM} or more pieces to see your total`
+                      : `₱${selectedProduct.price.toFixed(2)} per piece · choose how many to see your total`}
               </p>
             </div>
             <p className="text-xl font-bold text-primary whitespace-nowrap">
