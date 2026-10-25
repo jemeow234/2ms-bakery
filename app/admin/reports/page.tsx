@@ -13,15 +13,43 @@ import {
   BarChart3,
   Download,
   Printer,
+  Clock,
+  X,
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { formatCategory } from '@/lib/utils'
+import { shortOrderNumber } from '@/lib/orders'
 
 type FilterPeriod = 'daily' | 'weekly' | 'monthly'
+
+const HISTORY_PAGE_SIZE = 100
+
+// yyyy-mm-dd in local time, for <input type="date">.
+const toDateInputValue = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 
 export default function ReportsPage() {
   const { adminOrders: orders, products, inventoryLogs } = useStore()
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('daily')
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [historySearch, setHistorySearch] = useState('')
+  const [hourFilter, setHourFilter] = useState<number | null>(null)
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE)
+
+  const resetHistoryView = () => {
+    setHourFilter(null)
+    setHistoryLimit(HISTORY_PAGE_SIZE)
+  }
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -29,9 +57,8 @@ export default function ReportsPage() {
     let endDate = new Date()
 
     if (filterPeriod === 'daily') {
-      startDate.setDate(now.getDate())
-      startDate.setHours(0, 0, 0, 0)
-      endDate = new Date(now)
+      startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0)
+      endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999)
     } else if (filterPeriod === 'weekly') {
       startDate.setDate(now.getDate() - now.getDay())
       startDate.setHours(0, 0, 0, 0)
@@ -145,6 +172,26 @@ export default function ReportsPage() {
       0
     )
 
+    // One row per item sold, newest first.
+    const salesHistory = filteredOrders
+      .filter(o => o.status === 'completed')
+      .flatMap(order =>
+        order.items.map((item, index) => ({
+          key: `${order.id}-${index}`,
+          createdAt: order.createdAt,
+          hour: new Date(order.createdAt).getHours(),
+          orderNo: shortOrderNumber(order.id),
+          customerName: order.customerName,
+          productName: item.product.name,
+          quantity: item.quantity,
+          unitPrice: item.product.price,
+          lineTotal: item.product.price * item.quantity,
+          paymentMethod: order.paymentMethod,
+          deliveryType: order.deliveryType,
+        }))
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
     return {
       totalRevenue,
       totalOrders,
@@ -155,8 +202,26 @@ export default function ReportsPage() {
       categoryRevenue,
       salesData,
       inventoryValue,
+      salesHistory,
     }
-  }, [orders, products, filterPeriod, selectedMonth])
+  }, [orders, products, filterPeriod, selectedMonth, selectedDate])
+
+  const visibleHistory = useMemo(() => {
+    const query = historySearch.trim().toLowerCase()
+    return stats.salesHistory.filter(
+      row =>
+        (hourFilter === null || row.hour === hourFilter) &&
+        (!query || row.productName.toLowerCase().includes(query))
+    )
+  }, [stats.salesHistory, historySearch, hourFilter])
+
+  const visibleHistoryTotals = useMemo(
+    () => ({
+      quantity: visibleHistory.reduce((sum, row) => sum + row.quantity, 0),
+      revenue: visibleHistory.reduce((sum, row) => sum + row.lineTotal, 0),
+    }),
+    [visibleHistory]
+  )
 
   const formatCurrency = (value: number) => `₱${value.toFixed(2)}`
 
@@ -187,11 +252,25 @@ export default function ReportsPage() {
       [''],
       ['Best Sellers', ''],
       ...stats.bestSellers.map(p => [p.name, `${p.quantity} sold - ${formatCurrency(p.revenue)}`]),
+      [''],
+      ['Sales History', ''],
+      ['Date & Time', 'Order #', 'Product', 'Qty', 'Unit Price', 'Total', 'Payment', 'Type', 'Customer'],
+      ...stats.salesHistory.map(row => [
+        formatDateTime(row.createdAt),
+        row.orderNo,
+        row.productName,
+        row.quantity,
+        formatCurrency(row.unitPrice),
+        formatCurrency(row.lineTotal),
+        row.paymentMethod,
+        row.deliveryType,
+        row.customerName,
+      ]),
     ]
 
     return [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
   }
 
@@ -237,7 +316,10 @@ export default function ReportsPage() {
               {(['daily', 'weekly', 'monthly'] as const).map(period => (
                 <button
                   key={period}
-                  onClick={() => setFilterPeriod(period)}
+                  onClick={() => {
+                    setFilterPeriod(period)
+                    resetHistoryView()
+                  }}
                   className={`px-4 py-2 rounded-lg transition-all capitalize font-medium text-sm ${
                     filterPeriod === period
                       ? 'bg-primary text-primary-foreground'
@@ -249,6 +331,25 @@ export default function ReportsPage() {
               ))}
             </div>
 
+            {/* Date Selector for Daily View */}
+            {filterPeriod === 'daily' && (
+              <div className="flex gap-2 items-center flex-wrap">
+                <p className="text-sm font-medium text-foreground">Select Date:</p>
+                <input
+                  type="date"
+                  value={toDateInputValue(selectedDate)}
+                  max={toDateInputValue(new Date())}
+                  onChange={(e) => {
+                    if (!e.target.value) return
+                    const [year, month, day] = e.target.value.split('-')
+                    setSelectedDate(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))
+                    resetHistoryView()
+                  }}
+                  className="px-4 py-2 rounded-lg border border-border bg-card text-foreground"
+                />
+              </div>
+            )}
+
             {/* Month Selector for Monthly View */}
             {filterPeriod === 'monthly' && (
               <div className="flex gap-2 items-center flex-wrap">
@@ -257,8 +358,10 @@ export default function ReportsPage() {
                   type="month"
                   value={`${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`}
                   onChange={(e) => {
+                    if (!e.target.value) return
                     const [year, month] = e.target.value.split('-')
                     setSelectedMonth(new Date(parseInt(year), parseInt(month) - 1, 1))
+                    resetHistoryView()
                   }}
                   className="px-4 py-2 rounded-lg border border-border bg-card text-foreground"
                 />
@@ -427,8 +530,24 @@ export default function ReportsPage() {
                   {Object.entries(stats.salesData).map(([label, amount]) => {
                     const maxSale = Math.max(...Object.values(stats.salesData), 1)
                     const height = (amount / maxSale) * 100
+                    // In the daily view an hour bar narrows the sales history to that hour.
+                    const hour = filterPeriod === 'daily' ? parseInt(label, 10) : null
+                    const clickable = hour !== null && amount > 0
+                    const dimmed = hourFilter !== null && hour !== hourFilter
                     return (
-                      <div key={label} className="flex-1 flex flex-col items-center gap-2 min-w-12">
+                      <button
+                        key={label}
+                        type="button"
+                        disabled={!clickable}
+                        onClick={() => {
+                          setHourFilter(hourFilter === hour ? null : hour)
+                          setHistoryLimit(HISTORY_PAGE_SIZE)
+                        }}
+                        title={clickable ? `Show sales at ${label}` : undefined}
+                        className={`flex-1 flex flex-col items-center gap-2 min-w-12 ${
+                          clickable ? 'cursor-pointer' : 'cursor-default'
+                        } ${dimmed ? 'opacity-40' : ''}`}
+                      >
                         <div className="w-full flex flex-col items-center justify-end h-48">
                           {amount > 0 && (
                             <span className="text-xs text-muted-foreground mb-1">
@@ -441,11 +560,118 @@ export default function ReportsPage() {
                           />
                         </div>
                         <span className="text-xs text-muted-foreground text-center">{label}</span>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
               </div>
+              {filterPeriod === 'daily' && (
+                <p className="text-xs text-muted-foreground px-4">
+                  Click an hour to see exactly what sold then.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sales History */}
+          <Card className="border-border">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Sales History
+                </CardTitle>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {hourFilter !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setHourFilter(null)}
+                      className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20"
+                    >
+                      {`${hourFilter.toString().padStart(2, '0')}:00 – ${hourFilter.toString().padStart(2, '0')}:59`}
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                  <Input
+                    value={historySearch}
+                    onChange={e => {
+                      setHistorySearch(e.target.value)
+                      setHistoryLimit(HISTORY_PAGE_SIZE)
+                    }}
+                    placeholder="Search product..."
+                    className="w-full sm:w-56"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {visibleHistory.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No sales in this period</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date & Time</th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Order #</th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Product</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Qty</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Unit Price</th>
+                          <th className="text-right py-3 px-4 font-medium text-muted-foreground">Total</th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Payment</th>
+                          <th className="text-left py-3 px-4 font-medium text-muted-foreground">Customer</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleHistory.slice(0, historyLimit).map(row => (
+                          <tr key={row.key} className="border-b border-border last:border-0">
+                            <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
+                              {formatDateTime(row.createdAt)}
+                            </td>
+                            <td className="py-3 px-4 font-mono text-xs text-muted-foreground">#{row.orderNo}</td>
+                            <td className="py-3 px-4 text-foreground font-medium">{row.productName}</td>
+                            <td className="py-3 px-4 text-right text-foreground">{row.quantity}</td>
+                            <td className="py-3 px-4 text-right text-muted-foreground">
+                              {formatCurrency(row.unitPrice)}
+                            </td>
+                            <td className="py-3 px-4 text-right text-foreground font-medium">
+                              {formatCurrency(row.lineTotal)}
+                            </td>
+                            <td className="py-3 px-4 text-muted-foreground uppercase text-xs">{row.paymentMethod}</td>
+                            <td className="py-3 px-4 text-muted-foreground">{row.customerName || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-border">
+                          <td colSpan={3} className="py-3 px-4 font-medium text-foreground">
+                            {visibleHistory.length} line{visibleHistory.length === 1 ? '' : 's'}
+                          </td>
+                          <td className="py-3 px-4 text-right font-bold text-foreground">
+                            {visibleHistoryTotals.quantity}
+                          </td>
+                          <td />
+                          <td className="py-3 px-4 text-right font-bold text-foreground">
+                            {formatCurrency(visibleHistoryTotals.revenue)}
+                          </td>
+                          <td colSpan={2} />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  {visibleHistory.length > historyLimit && (
+                    <div className="flex justify-center pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setHistoryLimit(limit => limit + HISTORY_PAGE_SIZE)}
+                      >
+                        Show more ({visibleHistory.length - historyLimit} left)
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -494,7 +720,7 @@ export default function ReportsPage() {
                             {log.previousStock} → {log.newStock}
                           </td>
                           <td className="py-3 px-4 text-muted-foreground text-sm">
-                            {new Date(log.createdAt).toLocaleDateString()}
+                            {formatDateTime(log.createdAt)}
                           </td>
                         </tr>
                       ))}
