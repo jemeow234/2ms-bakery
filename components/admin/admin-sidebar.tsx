@@ -16,6 +16,7 @@ import {
   Megaphone,
   Menu,
   CalendarHeart,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LogoMark } from '@/components/logo-mark'
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/admin/orders', label: 'Orders', icon: ClipboardList },
   { href: '/admin/special-orders', label: 'Special Orders', icon: CalendarHeart },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
 ]
