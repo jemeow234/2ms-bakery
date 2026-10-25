@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { z } from 'zod'
-import { DELIVERY_RANGE_KM, MINIMUM_DELIVERY_TOTAL, MINIMUM_ORDER_QUANTITY, isScheduleValid } from '@/lib/delivery'
+import { DELIVERY_RANGE_KM, MINIMUM_DELIVERY_QUANTITY, MINIMUM_DELIVERY_TOTAL, isScheduleValid } from '@/lib/delivery'
 import { quoteDelivery } from '@/lib/geocode'
 import { sendOrderReceipt } from '@/lib/email/send-receipt'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -114,9 +114,9 @@ export async function POST(req: NextRequest) {
       }
 
       const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
-      if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
+      if (deliveryType === 'delivery' && totalQuantity < MINIMUM_DELIVERY_QUANTITY) {
         return NextResponse.json(
-          { error: `Minimum order quantity is ${MINIMUM_ORDER_QUANTITY} items.` },
+          { error: `Delivery orders need at least ${MINIMUM_DELIVERY_QUANTITY} items. Add more items or choose pick-up.` },
           { status: 400 }
         )
       }

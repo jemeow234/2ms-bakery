@@ -43,8 +43,8 @@ import {
   DELIVERY_SESSIONS,
   DELIVERY_SESSION_KEYS,
   DeliverySession,
+  MINIMUM_DELIVERY_QUANTITY,
   MINIMUM_DELIVERY_TOTAL,
-  MINIMUM_ORDER_QUANTITY,
   bakeryTodayISO,
   formatSchedule,
   formatSession,
@@ -185,9 +185,10 @@ export default function CheckoutPage() {
   // The GCash check covers exactly this cart; any quantity change re-arms it.
   const cartKey = items.map(item => `${item.product.id}:${item.quantity}`).join(',')
   const gcashChecked = cartCheck.status === 'ok' && cartCheck.cartKey === cartKey
+  const belowDeliveryQuantity = isDelivery && totalQuantity < MINIMUM_DELIVERY_QUANTITY
   const belowDeliveryMinimum = isDelivery && totalPrice < MINIMUM_DELIVERY_TOTAL
   const canCheckout =
-    totalQuantity >= MINIMUM_ORDER_QUANTITY &&
+    !belowDeliveryQuantity &&
     !belowDeliveryMinimum &&
     hasSchedule &&
     !addressBlocksCheckout &&
@@ -264,9 +265,8 @@ export default function CheckoutPage() {
       return
     }
 
-    // Validate minimum quantity
-    if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
-      toast.error(`Minimum order quantity is ${MINIMUM_ORDER_QUANTITY} items`)
+    if (belowDeliveryQuantity) {
+      toast.error(`Delivery orders need at least ${MINIMUM_DELIVERY_QUANTITY} items. Add more items or choose pick-up.`)
       return
     }
 
@@ -581,18 +581,6 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                   ))}
-
-                  {totalQuantity < MINIMUM_ORDER_QUANTITY && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
-                      <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-amber-900">Minimum Order Required</p>
-                        <p className="text-sm text-amber-800">
-                          Add {MINIMUM_ORDER_QUANTITY - totalQuantity} more item(s) to checkout
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -652,7 +640,7 @@ export default function CheckoutPage() {
                         <div>
                           <p className="font-medium text-foreground">Delivery</p>
                           <p className="text-sm text-muted-foreground">
-                            Free delivery up to {DELIVERY_RANGE_KM}km · ₱{MINIMUM_DELIVERY_TOTAL} minimum
+                            Free delivery up to {DELIVERY_RANGE_KM}km · min. {MINIMUM_DELIVERY_QUANTITY} items &amp; ₱{MINIMUM_DELIVERY_TOTAL}
                           </p>
                         </div>
                       </label>
@@ -673,6 +661,17 @@ export default function CheckoutPage() {
                         </div>
                       </label>
                     </RadioGroup>
+                    {belowDeliveryQuantity && (
+                      <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-amber-900">{MINIMUM_DELIVERY_QUANTITY} items minimum for delivery</p>
+                          <p className="text-sm text-amber-800">
+                            Add {MINIMUM_DELIVERY_QUANTITY - totalQuantity} more item(s) to your cart, or choose pick-up.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     {belowDeliveryMinimum && (
                       <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg flex gap-3">
                         <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
@@ -1016,15 +1015,9 @@ export default function CheckoutPage() {
 
                 {step === 'cart' && items.length > 0 && (
                   <Button
-                    onClick={() => {
-                      if (totalQuantity < MINIMUM_ORDER_QUANTITY) {
-                        toast.error(`Add ${MINIMUM_ORDER_QUANTITY - totalQuantity} more item(s) to checkout`)
-                      } else {
-                        goToDetails()
-                      }
-                    }}
+                    onClick={goToDetails}
                     className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    disabled={totalQuantity < MINIMUM_ORDER_QUANTITY || hasStockProblem}
+                    disabled={hasStockProblem}
                   >
                     Proceed to Checkout
                   </Button>

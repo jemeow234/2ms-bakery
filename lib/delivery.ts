@@ -1,8 +1,10 @@
 // Delivery rules shared by the checkout UI and the order API, so the client can
 // never offer something the server will reject.
 
-export const MINIMUM_ORDER_QUANTITY = 2
-/** Smallest order total (₱) the bakery will deliver. Pick-up has no minimum. */
+// Smallest order the bakery will deliver. Pick-up has no minimum.
+/** Fewest items per delivery order. */
+export const MINIMUM_DELIVERY_QUANTITY = 2
+/** Smallest delivery order total (₱). */
 export const MINIMUM_DELIVERY_TOTAL = 100
 export const DELIVERY_RANGE_KM = 1
 

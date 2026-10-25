@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
       // Account, checkout and staff pages have nothing for search results.
-      disallow: ['/admin', '/api/', '/checkout', '/orders', '/login', '/forgot-password', '/update-password'],
+      disallow: ['/admin', '/api/', '/checkout', '/orders', '/profile', '/login', '/forgot-password', '/update-password'],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   }

@@ -8,7 +8,7 @@ import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { NotificationCenter } from '@/components/notification-center'
-import { ClipboardList, Menu, ShoppingBag, User, LogOut } from 'lucide-react'
+import { ClipboardList, Menu, ShoppingBag, User, UserCircle, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -111,11 +111,14 @@ export function Navbar() {
           <NotificationCenter />
 
           <Button
+            asChild
             size="sm"
-            onClick={() => scrollToSection('#products')}
             className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            Order Now
+            <Link href={user ? '/profile' : '/login?next=/profile'}>
+              <UserCircle className="h-4 w-4" />
+              Profile
+            </Link>
           </Button>
 
           <Button asChild variant="ghost" size="icon" className="relative">
@@ -219,11 +222,11 @@ export function Navbar() {
                 )}
               </div>
               <div className="mt-auto px-6 pb-6">
-                <Button
-                  onClick={() => scrollToSection('#products')}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  Order Now
+                <Button asChild className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Link href={user ? '/profile' : '/login?next=/profile'} onClick={() => setMenuOpen(false)}>
+                    <UserCircle className="h-4 w-4" />
+                    Profile
+                  </Link>
                 </Button>
               </div>
             </SheetContent>
