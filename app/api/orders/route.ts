@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { DELIVERY_RANGE_KM, MINIMUM_DELIVERY_QUANTITY, MINIMUM_DELIVERY_TOTAL, isScheduleValid } from '@/lib/delivery'
 import { quoteDelivery } from '@/lib/geocode'
 import { sendOrderReceipt } from '@/lib/email/send-receipt'
+import { notifyNewOrder } from '@/lib/email/notify-new-order'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_MAX_BYTES } from '@/lib/payment'
 import { safeImageExtension, serverError } from '@/lib/api'
@@ -252,6 +253,11 @@ export async function POST(req: NextRequest) {
     // triggered here instead.
     if (order.status === 'completed') {
       after(() => sendOrderReceipt(order.id))
+    }
+    // Customer orders arrive pending; tell the bakery. POS walk-ins are rung
+    // up at the counter, so they need no alert.
+    if (order.status === 'pending') {
+      after(() => notifyNewOrder(order.id))
     }
 
     return NextResponse.json({ order: mapOrderRow(order as OrderRow) })

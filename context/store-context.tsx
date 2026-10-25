@@ -1,7 +1,11 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Product, Order, InventoryLog, Announcement, OrderFeedback } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
+import { shortOrderNumber } from '@/lib/orders'
 import { useAuth } from './auth-context'
 
 interface StoreContextType {
@@ -21,6 +25,7 @@ interface StoreContextType {
     paymentProof?: File
   ) => Promise<{ order: Order | null; error?: string }>
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
+  cancelOrder: (orderId: string) => Promise<{ ok: boolean; error?: string }>
   addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
   deleteAnnouncement: (id: string) => Promise<boolean>
   addFeedback: (
@@ -33,6 +38,32 @@ interface StoreContextType {
   refreshAnnouncements: () => Promise<void>
 }
 
+// A short two-note chime, generated so there's no sound file to ship.
+// Browsers keep audio muted until the person has interacted with the page;
+// the toast still shows when it is.
+function playNewOrderChime() {
+  try {
+    const AudioCtx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    ;[880, 1320].forEach((frequency, index) => {
+      const start = ctx.currentTime + index * 0.18
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.frequency.value = frequency
+      gain.gain.setValueAtTime(0.0001, start)
+      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.3)
+      osc.connect(gain).connect(ctx.destination)
+      osc.start(start)
+      osc.stop(start + 0.32)
+    })
+    setTimeout(() => ctx.close(), 1000)
+  } catch {
+    // No audio available — the toast is enough.
+  }
+}
+
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
 
 // One store for the whole app (mounted in the root layout, admin included).
@@ -40,6 +71,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined)
 // does, so components that only call actions don't re-render on every fetch.
 export function StoreProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const router = useRouter()
   const userId = user?.id ?? null
   const isAdmin = user?.role === 'admin'
 
@@ -148,6 +180,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refreshInventoryLogs()
     }
   }, [userId, isAdmin, refreshOrders, refreshAdminOrders, refreshInventoryLogs])
+
+  // New-order alerts for admins. Realtime applies RLS, so only admins hear
+  // about other customers' orders (supabase/migrations/0024_realtime_orders.sql).
+  // POS walk-ins are inserted already completed, so only pending orders alert.
+  useEffect(() => {
+    if (!isAdmin) return
+    const supabase = createClient()
+    if (!supabase) return
+
+    const channel = supabase
+      .channel('admin-new-orders')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload: { new: { id: string; status: Order['status']; customer_name: string | null } }) => {
+          if (payload.new.status !== 'pending') return
+          playNewOrderChime()
+          toast.info(`New order #${shortOrderNumber(payload.new.id)}`, {
+            description: payload.new.customer_name || undefined,
+            duration: 15000,
+            action: { label: 'View', onClick: () => router.push('/admin/orders') },
+          })
+          refreshAdminOrders()
+          refreshProducts()
+          refreshInventoryLogs()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [isAdmin, router, refreshAdminOrders, refreshProducts, refreshInventoryLogs])
 
   const updateProduct = useCallback(async (product: Product): Promise<boolean> => {
     try {
@@ -314,6 +379,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshProducts, refreshInventoryLogs])
 
+  // The signed-in customer cancelling their own pending order.
+  const cancelOrder = useCallback(async (orderId: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o))
+        // The cancellation put stock back.
+        refreshProducts()
+        return { ok: true }
+      }
+      return { ok: false, error: data.error }
+    } catch (error) {
+      console.error('[store] Failed to cancel order:', error)
+      return { ok: false }
+    }
+  }, [refreshProducts])
+
   const addAnnouncement = useCallback(async (
     announcementData: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>
   ): Promise<boolean> => {
@@ -386,6 +469,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updateStock,
     addOrder,
     updateOrderStatus,
+    cancelOrder,
     addAnnouncement,
     deleteAnnouncement,
     addFeedback,
@@ -397,7 +481,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }), [
     products, orders, adminOrders, inventoryLogs, announcements, feedbacks, isLoading,
     updateProduct, addProduct, deleteProduct, updateStock, addOrder, updateOrderStatus,
-    addAnnouncement, deleteAnnouncement, addFeedback, refreshProducts, refreshOrders,
+    cancelOrder, addAnnouncement, deleteAnnouncement, addFeedback, refreshProducts, refreshOrders,
     refreshAdminOrders, refreshInventoryLogs, refreshAnnouncements,
   ])
 
