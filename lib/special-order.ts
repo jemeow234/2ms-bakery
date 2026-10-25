@@ -31,7 +31,7 @@ export const specialOrderSchema = z.object({
     .regex(/^[0-9+()\-\s]+$/, 'Please enter a valid phone number.'),
   product: z.string().trim().min(1, 'Please choose what you would like.').max(100),
   quantity: z
-    .number({ invalid_type_error: 'Please choose a quantity.' })
+    .number({ error: 'Please choose a quantity.' })
     .int('Please enter a whole number of pieces.')
     .min(SPECIAL_ORDER_MINIMUM, `Special orders start at ${SPECIAL_ORDER_MINIMUM} pieces.`)
     .max(SPECIAL_ORDER_MAXIMUM, `For more than ${SPECIAL_ORDER_MAXIMUM} pieces, please call us.`),
