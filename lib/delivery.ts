@@ -8,9 +8,6 @@ export const MINIMUM_DELIVERY_QUANTITY = 2
 export const MINIMUM_DELIVERY_TOTAL = 100
 export const DELIVERY_RANGE_KM = 1
 
-/** A session closes this many hours before it starts. */
-export const ORDER_LEAD_HOURS = 2
-
 /**
  * The bakery trades in a single fixed-offset timezone (Philippines, UTC+8, no
  * DST). Slot maths is done against that offset rather than the runtime's local
@@ -122,15 +119,23 @@ export function bakeryTodayISO(now: Date = new Date()): string {
   return shifted.toISOString().slice(0, 10)
 }
 
-/** Which sessions can still be booked on the given date. */
+/** A session stops taking orders this many minutes before it ends. */
+export const SESSION_CLOSE_MINUTES_BEFORE_END = 15
+
+/**
+ * Which sessions can still be booked on the given date. A session stays open
+ * until shortly before it ends, so the one in progress (11:00 at 11:30) can
+ * still be picked, but not at 11:50.
+ */
 export function getSelectableSessions(
   dateISO: string,
   now: Date = new Date(),
   slackMs = 0
 ): DeliverySession[] {
   if (!isDateString(dateISO)) return []
-  const cutoff = now.getTime() + ORDER_LEAD_HOURS * 60 * 60 * 1000 - slackMs
-  return DELIVERY_SESSION_KEYS.filter(key => sessionStartsAt(dateISO, key).getTime() >= cutoff)
+  const cutoff = now.getTime() - slackMs
+  const openMs = (60 - SESSION_CLOSE_MINUTES_BEFORE_END) * 60 * 1000
+  return DELIVERY_SESSION_KEYS.filter(key => sessionStartsAt(dateISO, key).getTime() + openMs > cutoff)
 }
 
 /**

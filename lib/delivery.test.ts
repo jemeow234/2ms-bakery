@@ -23,12 +23,15 @@ test('a slot starts at its Manila time', () => {
   assert.equal(sessionStartsAt('2026-10-21', '09:00').toISOString(), '2026-10-21T01:00:00.000Z')
 })
 
-test('slots close two hours before they start', () => {
-  // 8:30 AM in Manila: 10:00 is too soon (1.5 h away), 11:00 is the first one.
+test('slots stay open until 15 minutes before they end', () => {
+  // 8:30 AM in Manila: the 8:00 slot is in progress and can still be picked.
   const now = new Date('2026-10-21T00:30:00Z')
   assert.deepEqual(getSelectableSessions('2026-10-21', now), [
-    '11:00', '12:00', '13:00', '14:00', '15:00', '16:00',
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00',
   ])
+  // 4:44 PM: the last slot is still open; at 4:45 PM nothing is left.
+  assert.deepEqual(getSelectableSessions('2026-10-21', new Date('2026-10-21T08:44:00Z')), ['16:00'])
+  assert.deepEqual(getSelectableSessions('2026-10-21', new Date('2026-10-21T08:45:00Z')), [])
 })
 
 test('every slot is open on a future day, none on a past one', () => {
@@ -39,18 +42,18 @@ test('every slot is open on a future day, none on a past one', () => {
 
 test('the server rejects what the checkout would disable', () => {
   const now = new Date('2026-10-21T00:30:00Z')
-  assert.equal(isScheduleValid('2026-10-21', '11:00', now), true)
-  assert.equal(isScheduleValid('2026-10-21', '10:00', now), false)
+  assert.equal(isScheduleValid('2026-10-21', '08:00', now), true)
+  assert.equal(isScheduleValid('2026-10-21', '07:00', now), false)
   assert.equal(isScheduleValid('2026-10-21', 'morning', now), false, 'legacy slots cannot be booked')
   assert.equal(isScheduleValid('21/10/2026', '11:00', now), false)
   assert.equal(isScheduleValid(undefined, undefined, now), false)
 })
 
 test('a few minutes of clock skew between browser and server is tolerated', () => {
-  // 9:02 AM: 11:00 closed two minutes ago, inside the 5-minute allowance.
-  const now = new Date('2026-10-21T01:02:00Z')
-  assert.equal(isScheduleValid('2026-10-21', '11:00', now), true)
-  assert.equal(isScheduleValid('2026-10-21', '11:00', now, 0), false)
+  // 8:47 AM: the 8:00 slot closed two minutes ago, inside the 5-minute allowance.
+  const now = new Date('2026-10-21T00:47:00Z')
+  assert.equal(isScheduleValid('2026-10-21', '08:00', now), true)
+  assert.equal(isScheduleValid('2026-10-21', '08:00', now, 0), false)
 })
 
 test('slots and legacy slots are formatted for people', () => {
