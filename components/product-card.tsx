@@ -247,7 +247,8 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
           {product.name}
         </h3>
 
-        <p className="hidden sm:block text-muted-foreground text-sm mb-2 line-clamp-2 text-pretty">
+        {/* Shown in full on every screen: the description lists the ingredients. */}
+        <p className="text-muted-foreground text-xs sm:text-sm mb-2 text-pretty">
           {product.description}
         </p>
 
