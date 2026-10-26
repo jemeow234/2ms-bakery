@@ -307,7 +307,7 @@ export default function OrdersPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Date</p>
                   <p className="font-medium text-foreground">
-                    {new Date(selectedOrder.createdAt).toLocaleString()}
+                    {new Date(selectedOrder.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
