@@ -116,7 +116,7 @@ export default function LoginPage() {
 
     if (result.success) {
       if (result.needsEmailConfirmation) {
-        toast.success('Account created! Check your email to confirm it before signing in.')
+        toast.success('Account created! Check your email to confirm it (Check Spam folder) before signing in.')
         switchMode('login')
       } else {
         toast.success('Account created successfully! Welcome to 2M\'s Bakery!')
