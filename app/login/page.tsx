@@ -96,7 +96,7 @@ export default function LoginPage() {
     }
 
     if (!acceptedPrivacy) {
-      toast.error('Please agree to the Privacy Policy to create an account')
+      toast.error('Please agree to the Terms of Service and Privacy Policy to create an account')
       return
     }
 
@@ -370,6 +370,15 @@ export default function LoginPage() {
                   <span>
                     I have read and agree to the{' '}
                     <Link
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Terms of Service
+                    </Link>
+                    {' '}and{' '}
+                    <Link
                       href="/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -377,7 +386,7 @@ export default function LoginPage() {
                     >
                       Privacy Policy
                     </Link>
-                    , and consent to 2M&apos;s Bakery processing my personal information as described there.
+                    , and consent to 2M&apos;s Bakery processing my personal information as described in the Privacy Policy.
                   </span>
                 </Label>
               </div>
