@@ -75,7 +75,8 @@ export function Navbar() {
                 alt=""
                 width={80}
                 height={80}
-                priority
+                loading="eager"
+                sizes="40px"
                 className="w-full h-full object-cover"
               />
             </div>

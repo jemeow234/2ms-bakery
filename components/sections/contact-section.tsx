@@ -167,13 +167,16 @@ export function ContactSection() {
 
             {/* Visit Us panel */}
             <div className="relative h-64 rounded-2xl overflow-hidden bg-secondary">
-              <iframe
-                src={BAKERY_MAP_EMBED_URL}
-                title="Map showing 2M's Bakery in Bulacnin, Lipa City"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="absolute inset-0 h-full w-full border-0"
-              />
+              {/* Google's map scripts outweigh the rest of the page, so they wait until the section is on screen. */}
+              {isVisible && (
+                <iframe
+                  src={BAKERY_MAP_EMBED_URL}
+                  title="Map showing 2M's Bakery in Bulacnin, Lipa City"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+              )}
               {/* Only shades the bottom strip, and lets clicks through so the map stays draggable. */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white flex items-center gap-3">

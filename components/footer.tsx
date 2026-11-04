@@ -12,7 +12,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-2 mb-3">
-              <LogoMark className="w-12 h-12" />
+              <LogoMark className="w-12 h-12" sizes="48px" />
               <span className="text-xl font-bold tracking-tight">2M&apos;s Bakery</span>
             </Link>
             <p className="text-background/70 max-w-sm text-pretty">
