@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { serverError } from '@/lib/api'
+import { notifyOrderCancelled } from '@/lib/email/notify-order-cancelled'
 import { clientIp, underRateLimit } from '@/lib/rate-limit'
 
 const ALREADY_PREPARING =
@@ -55,6 +56,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: ALREADY_PREPARING }, { status: 409 })
     }
     if (cancelError) throw cancelError
+
+    after(() => notifyOrderCancelled(id))
 
     return NextResponse.json({ order: { id, status: data?.status ?? 'cancelled' } })
   } catch (error) {

@@ -8,7 +8,7 @@ import { getReceiptFrom, getResend } from './client'
 import { escapeHtml } from './order-receipt'
 
 // Where new-order alerts land. Override with ORDER_ALERT_EMAIL.
-const ALERT_TO = process.env.ORDER_ALERT_EMAIL || CONTACT_INBOX_DEFAULT
+export const ALERT_TO = process.env.ORDER_ALERT_EMAIL || CONTACT_INBOX_DEFAULT
 
 const peso = (amount: number) => `₱${amount.toFixed(2)}`
 

@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     question: 'Can I cancel or change my order?',
-    answer: 'You may contact the bakery as soon as possible to request changes or cancellation. Approval depends on the current status of your order.',
+    answer: 'You can cancel your order yourself from My Orders or the order page while it is still pending. Once we have started preparing it, or if you need to change something, please contact the bakery as soon as possible. Approval depends on the current status of your order.',
   },
   {
     question: 'What should I do if I receive the wrong or damaged product?',

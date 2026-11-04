@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Check, Store, Truck, XCircle } from 'lucide-react'
+import { CancelOrderButton } from '@/components/cancel-order-button'
 import { LogoMark } from '@/components/logo-mark'
 import { OrderStatusBadge } from '@/components/order-status-badge'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -158,6 +159,10 @@ export default async function OrderStatusPage({ params }: { params: Promise<{ id
             <span>₱{Number(order.total).toFixed(2)}</span>
           </div>
         </section>
+
+        <div className="flex justify-end empty:hidden">
+          <CancelOrderButton orderId={order.id} />
+        </div>
 
         <p className="text-xs text-muted-foreground text-center">
           Keep this page&apos;s link to check on your order. Anyone with the link can see this page,

@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronRight, Loader2, LogIn, ShoppingBag, Store, Truck, XCircle } from 'lucide-react'
-import { toast } from 'sonner'
+import { ArrowLeft, ChevronRight, LogIn, ShoppingBag, Store, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CancelOrderButton } from '@/components/cancel-order-button'
 import { LogoMark } from '@/components/logo-mark'
 import { OrderStatusBadge } from '@/components/order-status-badge'
 import { useAuth } from '@/context/auth-context'
@@ -14,25 +13,7 @@ import { shortOrderNumber } from '@/lib/orders'
 
 export default function MyOrdersPage() {
   const { user, isLoading } = useAuth()
-  const { orders, cancelOrder } = useStore()
-  const [cancellingId, setCancellingId] = useState<string | null>(null)
-
-  const handleCancel = async (orderId: string, paymentMethod: string) => {
-    const refundNote = paymentMethod === 'gcash'
-      ? "\n\nYou paid by GCash — we'll contact you about your refund."
-      : ''
-    if (!window.confirm(`Cancel order #${shortOrderNumber(orderId)}?${refundNote}`)) return
-
-    setCancellingId(orderId)
-    const { ok, error } = await cancelOrder(orderId)
-    setCancellingId(null)
-
-    if (ok) {
-      toast.success('Your order was cancelled.')
-    } else {
-      toast.error(error || "We couldn't cancel your order. Please try again.")
-    }
-  }
+  const { orders } = useStore()
 
   const sortedOrders = [...orders].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -134,21 +115,7 @@ export default function MyOrdersPage() {
                   </Link>
                   {order.status === 'pending' && (
                     <div className="flex justify-end mt-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={cancellingId === order.id}
-                        onClick={() => handleCancel(order.id, order.paymentMethod)}
-                        className="text-destructive hover:text-destructive gap-2"
-                      >
-                        {cancellingId === order.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <XCircle className="h-4 w-4" />
-                        )}
-                        Cancel order
-                      </Button>
+                      <CancelOrderButton orderId={order.id} />
                     </div>
                   )}
                 </li>

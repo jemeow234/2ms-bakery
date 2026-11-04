@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CancelOrderButton } from '@/components/cancel-order-button'
 import { FeedbackModal } from '@/components/feedback-modal'
 import {
   ArrowLeft,
@@ -401,6 +402,12 @@ export default function CheckoutPage() {
                   Continue Shopping
                 </Link>
               </Button>
+            </div>
+            <div className="flex justify-center mt-4 empty:hidden">
+              <CancelOrderButton
+                orderId={orderNumber}
+                onCancelled={() => router.push(`/orders/${orderNumber}`)}
+              />
             </div>
           </div>
         </div>
