@@ -111,12 +111,11 @@ The protected `/admin` area provides:
 - Order review and status changes
 - Walk-in point-of-sale orders
 - Announcement management
-- Existing special-order record review
 - Customer feedback review
 - Realtime alerts for new pending orders, with optional email alerts
 - User and role management
 
-The public special-order page and submission API were removed; the admin special-order screen remains for existing records. Email delivery is optional. If `RESEND_API_KEY` is unset, customer receipts and new-order alerts are skipped, while the contact form reports that messaging is unavailable.
+The special-order pages and APIs were removed, both public and admin; the database tables remain. Email delivery is optional. If `RESEND_API_KEY` is unset, customer receipts and new-order alerts are skipped, while the contact form reports that messaging is unavailable.
 
 ## Routes
 
@@ -138,7 +137,7 @@ The public special-order page and submission API were removed; the admin special
 
 ### Admin routes
 
-`/admin`, `/admin/orders`, `/admin/inventory`, `/admin/pos`, `/admin/reports`, `/admin/announcements`, `/admin/special-orders`, `/admin/feedback`, and `/admin/users` require an authenticated user with the `admin` role. The corresponding API handlers live under [`app/api`](app/api) and repeat authorization checks on the server.
+`/admin`, `/admin/orders`, `/admin/inventory`, `/admin/pos`, `/admin/reports`, `/admin/announcements`, `/admin/feedback`, and `/admin/users` require an authenticated user with the `admin` role. The corresponding API handlers live under [`app/api`](app/api) and repeat authorization checks on the server.
 
 ## Repository layout
 
@@ -163,7 +162,7 @@ map/                 Repository navigation map and workflow documentation
 - Admin new-order notifications use Supabase Realtime and an optional Resend email alert. Apply the Realtime migration before relying on in-panel alerts.
 - Delivery address verification uses Nominatim and requires a valid identifying `User-Agent`; the application spaces and rate-limits geocoder requests.
 - Product descriptions expose the ingredient data stored by the catalog migrations. Customers with allergies should review those descriptions and contact the bakery with questions.
-- The public special-order intake was removed in the current application, although its database tables and admin records remain.
+- Special orders were removed from the application, although their database tables and existing records remain.
 - Keep schema changes in a new ordered Supabase migration. Update the related map cards when a significant workflow or data boundary changes.
 - Keep secrets and local configuration in `.env.local`, which is ignored by git.
 

@@ -15,7 +15,6 @@ import {
   Users,
   Megaphone,
   Menu,
-  CalendarHeart,
   MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -28,7 +27,6 @@ const navItems = [
   { href: '/admin/pos', label: 'POS System', icon: ShoppingCart },
   { href: '/admin/inventory', label: 'Inventory', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ClipboardList },
-  { href: '/admin/special-orders', label: 'Special Orders', icon: CalendarHeart },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
   { href: '/admin/users', label: 'Users', icon: Users },

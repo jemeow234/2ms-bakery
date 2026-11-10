@@ -28,6 +28,17 @@ const HISTORY_PAGE_SIZE = 100
 const toDateInputValue = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+const formatShortDate = (d: Date) => d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+
+// Sunday 00:00 of the week containing d, matching the Sun–Sat chart.
+const startOfWeek = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay())
+
+const formatWeekRange = (d: Date) => {
+  const start = startOfWeek(d)
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
+  return `${formatShortDate(start)} – ${formatShortDate(end)}, ${end.getFullYear()}`
+}
+
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString([], {
     month: 'short',
@@ -42,6 +53,7 @@ export default function ReportsPage() {
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('daily')
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [selectedWeek, setSelectedWeek] = useState<Date>(new Date())
   const [historySearch, setHistorySearch] = useState('')
   const [hourFilter, setHourFilter] = useState<number | null>(null)
   const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE)
@@ -52,7 +64,6 @@ export default function ReportsPage() {
   }
 
   const stats = useMemo(() => {
-    const now = new Date()
     let startDate = new Date()
     let endDate = new Date()
 
@@ -60,10 +71,8 @@ export default function ReportsPage() {
       startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0)
       endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999)
     } else if (filterPeriod === 'weekly') {
-      startDate.setDate(now.getDate() - now.getDay())
-      startDate.setHours(0, 0, 0, 0)
-      endDate = new Date(startDate)
-      endDate.setDate(endDate.getDate() + 7)
+      startDate = startOfWeek(selectedWeek)
+      endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 6, 23, 59, 59, 999)
     } else {
       // Monthly - use selected month
       startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1, 0, 0, 0, 0)
@@ -138,17 +147,20 @@ export default function ReportsPage() {
           salesData[hour] = (salesData[hour] || 0) + order.total
         })
     } else if (filterPeriod === 'weekly') {
-      // Daily breakdown for this week
+      // Daily breakdown for the selected week, labelled with weekday and date.
       const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-      weekDays.forEach(day => {
-        salesData[day] = 0
+      const dayLabels = weekDays.map((day, i) => {
+        const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i)
+        return `${day}\n${formatShortDate(date)}`
+      })
+      dayLabels.forEach(label => {
+        salesData[label] = 0
       })
       filteredOrders
         .filter(o => o.status === 'completed')
         .forEach(order => {
-          const date = new Date(order.createdAt)
-          const dayName = weekDays[date.getDay()]
-          salesData[dayName] = (salesData[dayName] || 0) + order.total
+          const label = dayLabels[new Date(order.createdAt).getDay()]
+          salesData[label] = (salesData[label] || 0) + order.total
         })
     } else {
       // Daily breakdown for this month
@@ -204,7 +216,7 @@ export default function ReportsPage() {
       inventoryValue,
       salesHistory,
     }
-  }, [orders, products, filterPeriod, selectedMonth, selectedDate])
+  }, [orders, products, filterPeriod, selectedMonth, selectedDate, selectedWeek])
 
   const visibleHistory = useMemo(() => {
     const query = historySearch.trim().toLowerCase()
@@ -346,6 +358,26 @@ export default function ReportsPage() {
                   }}
                   className="px-4 py-2 rounded-lg border border-border bg-card text-foreground"
                 />
+              </div>
+            )}
+
+            {/* Week Selector for Weekly View */}
+            {filterPeriod === 'weekly' && (
+              <div className="flex gap-2 items-center flex-wrap">
+                <p className="text-sm font-medium text-foreground">Select Week:</p>
+                <input
+                  type="date"
+                  value={toDateInputValue(selectedWeek)}
+                  max={toDateInputValue(new Date())}
+                  onChange={(e) => {
+                    if (!e.target.value) return
+                    const [year, month, day] = e.target.value.split('-')
+                    setSelectedWeek(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))
+                    resetHistoryView()
+                  }}
+                  className="px-4 py-2 rounded-lg border border-border bg-card text-foreground"
+                />
+                <p className="text-sm text-muted-foreground">{formatWeekRange(selectedWeek)}</p>
               </div>
             )}
 
@@ -519,7 +551,7 @@ export default function ReportsPage() {
                 {filterPeriod === 'daily'
                   ? 'Hourly Sales'
                   : filterPeriod === 'weekly'
-                  ? 'Daily Sales (This Week)'
+                  ? `Daily Sales (${formatWeekRange(selectedWeek)})`
                   : 'Daily Sales (This Month)'}
               </CardTitle>
             </CardHeader>
@@ -558,7 +590,7 @@ export default function ReportsPage() {
                             style={{ height: `${Math.max(height, 4)}%` }}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground text-center">{label}</span>
+                        <span className="text-xs text-muted-foreground text-center whitespace-pre-line">{label}</span>
                       </button>
                     )
                   })}
@@ -612,6 +644,9 @@ export default function ReportsPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border">
+                          {filterPeriod === 'weekly' && (
+                            <th className="text-left py-3 px-4 font-medium text-muted-foreground">Date</th>
+                          )}
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Order #</th>
                           <th className="text-left py-3 px-4 font-medium text-muted-foreground">Product</th>
                           <th className="text-right py-3 px-4 font-medium text-muted-foreground">Qty</th>
@@ -624,6 +659,11 @@ export default function ReportsPage() {
                       <tbody>
                         {visibleHistory.slice(0, historyLimit).map(row => (
                           <tr key={row.key} className="border-b border-border last:border-0">
+                            {filterPeriod === 'weekly' && (
+                              <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
+                                {formatDateTime(row.createdAt)}
+                              </td>
+                            )}
                             <td className="py-3 px-4 font-mono text-xs text-muted-foreground">#{row.orderNo}</td>
                             <td className="py-3 px-4 text-foreground font-medium">{row.productName}</td>
                             <td className="py-3 px-4 text-right text-foreground">{row.quantity}</td>
@@ -640,7 +680,7 @@ export default function ReportsPage() {
                       </tbody>
                       <tfoot>
                         <tr className="border-t-2 border-border">
-                          <td colSpan={2} className="py-3 px-4 font-medium text-foreground">
+                          <td colSpan={filterPeriod === 'weekly' ? 3 : 2} className="py-3 px-4 font-medium text-foreground">
                             {visibleHistory.length} line{visibleHistory.length === 1 ? '' : 's'}
                           </td>
                           <td className="py-3 px-4 text-right font-bold text-foreground">
