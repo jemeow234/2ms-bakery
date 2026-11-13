@@ -39,6 +39,15 @@ const formatWeekRange = (d: Date) => {
   return `${formatShortDate(start)} – ${formatShortDate(end)}, ${end.getFullYear()}`
 }
 
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString([], {
     month: 'short',
