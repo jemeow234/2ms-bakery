@@ -39,13 +39,11 @@ const formatWeekRange = (d: Date) => {
   return `${formatShortDate(start)} – ${formatShortDate(end)}, ${end.getFullYear()}`
 }
 
-const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString([], {
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString([], {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
   })
 
 export default function ReportsPage() {
@@ -661,7 +659,7 @@ export default function ReportsPage() {
                           <tr key={row.key} className="border-b border-border last:border-0">
                             {filterPeriod === 'weekly' && (
                               <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
-                                {formatDateTime(row.createdAt)}
+                                {formatDate(row.createdAt)}
                               </td>
                             )}
                             <td className="py-3 px-4 font-mono text-xs text-muted-foreground">#{row.orderNo}</td>
