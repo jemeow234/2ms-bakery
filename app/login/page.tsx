@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, MIN_PASSWORD_LENGTH } from '@/lib/utils'
 import { LogoMark } from '@/components/logo-mark'
@@ -53,8 +53,57 @@ export default function LoginPage() {
     return false
   }
 
-  const { login, register } = useAuth()
+  const { login, register, logout, pendingVerificationEmail, verifyLoginCode, resendLoginCode } = useAuth()
   const router = useRouter()
+
+  // Sign-in code step: shown whenever this browser has a session whose
+  // emailed code hasn't been entered yet.
+  const awaitingCode = pendingVerificationEmail !== null
+  const [loginCode, setLoginCode] = useState('')
+  const [resendIn, setResendIn] = useState(0)
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = setTimeout(() => setResendIn(s => s - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [resendIn])
+
+  const startCodeStep = (sendError?: string) => {
+    setLoginCode('')
+    setResendIn(60)
+    if (sendError) toast.error(sendError)
+    else toast.success('We emailed you a 6-digit sign-in code.')
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    const result = await verifyLoginCode(loginCode)
+    setIsLoading(false)
+
+    if (result.success) {
+      toast.success('Welcome back!')
+      router.push(result.role === 'admin' ? '/admin' : nextPath() ?? '/')
+    } else {
+      toast.error(result.error || 'Verification failed')
+    }
+  }
+
+  const handleResendCode = async () => {
+    const result = await resendLoginCode()
+    if (result.success) {
+      setResendIn(60)
+      toast.success('A new code is on its way.')
+    } else {
+      toast.error(result.error || "Couldn't send a new code")
+    }
+  }
+
+  const handleUseDifferentAccount = async () => {
+    await logout()
+    setLoginCode('')
+    setLoginPassword('')
+  }
 
   // Pages that need an account (e.g. checkout) send people here with
   // ?next=/path so they land back where they were. Only same-site paths.
@@ -72,8 +121,7 @@ export default function LoginPage() {
     captchaRef.current?.reset()
 
     if (result.success) {
-      toast.success('Welcome back!')
-      router.push(result.role === 'admin' ? '/admin' : nextPath() ?? '/')
+      startCodeStep(result.error)
     } else {
       toast.error(result.error || 'Login failed')
     }
@@ -119,8 +167,7 @@ export default function LoginPage() {
         toast.success('Account created! Check your email to confirm it (Check Spam folder) before signing in.')
         switchMode('login')
       } else {
-        toast.success('Account created successfully! Welcome to 2M\'s Bakery!')
-        router.push(nextPath() ?? '/')
+        startCodeStep(result.error)
       }
     } else {
       toast.error(result.error || 'Registration failed')
@@ -148,15 +195,85 @@ export default function LoginPage() {
               <span className="text-2xl font-bold tracking-tight text-foreground">2M&apos;s Bakery</span>
             </Link>
             <h1 className="font-serif text-3xl font-bold text-foreground mb-2">
-              {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+              {awaitingCode ? 'Check Your Email' : authMode === 'login' ? 'Welcome Back' : 'Create Account'}
             </h1>
             <p className="text-muted-foreground">
-              {authMode === 'login' 
-                ? 'Sign in to your account to continue' 
-                : 'Join our bakery family today'}
+              {awaitingCode
+                ? 'Enter the sign-in code we sent to finish signing in'
+                : authMode === 'login'
+                  ? 'Sign in to your account to continue'
+                  : 'Join our bakery family today'}
             </p>
           </div>
 
+          {awaitingCode ? (
+            <form onSubmit={handleVerifyCode} className="space-y-5">
+              <div className="rounded-lg border border-border bg-secondary p-4 flex items-start gap-3">
+                <MailCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <p className="text-sm text-muted-foreground">
+                  We sent a 6-digit code to{' '}
+                  <span className="font-medium text-foreground break-all">
+                    {pendingVerificationEmail || 'your email'}
+                  </span>
+                  . It expires in 10 minutes (check your Spam folder too).
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="login-code" className="text-foreground">
+                  Sign-in Code
+                </Label>
+                <Input
+                  id="login-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  value={loginCode}
+                  onChange={e => setLoginCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  required
+                  autoFocus
+                  className="mt-2 bg-secondary border-border text-center text-2xl tracking-[0.5em] font-semibold"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading || loginCode.length !== 6}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  'Verify & Sign In'
+                )}
+              </Button>
+
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendIn > 0}
+                  className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                >
+                  {resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUseDifferentAccount}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Use a different account
+                </button>
+              </div>
+            </form>
+          ) : (
+          <>
           {/* Auth Mode Toggle */}
           <div className="flex rounded-lg bg-secondary p-1 mb-6">
             <button
@@ -408,6 +525,8 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
+          )}
+          </>
           )}
         </div>
       </div>

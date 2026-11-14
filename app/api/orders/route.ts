@@ -7,7 +7,7 @@ import { sendOrderReceipt } from '@/lib/email/send-receipt'
 import { notifyNewOrder } from '@/lib/email/notify-new-order'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PAYMENT_PROOF_BUCKET, PAYMENT_PROOF_MAX_BYTES } from '@/lib/payment'
-import { safeImageExtension, serverError } from '@/lib/api'
+import { safeImageExtension, serverError, getVerifiedUser } from '@/lib/api'
 import { clientIp, underRateLimit } from '@/lib/rate-limit'
 import { mapOrderRow, type OrderRow } from '@/lib/orders'
 
@@ -51,7 +51,7 @@ const ORDER_ERRORS: Record<string, (detail?: string) => string> = {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
 
     // Ordering requires an account, so every order is tied to a customer.
     if (!user) {
@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

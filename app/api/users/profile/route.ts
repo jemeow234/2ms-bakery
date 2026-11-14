@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { serverError } from '@/lib/api'
+import { serverError, getVerifiedUser } from '@/lib/api'
 
 // Email belongs to Supabase Auth and the role to admins; neither is set here.
 const profileSchema = z.object({
@@ -13,7 +13,7 @@ const profileSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

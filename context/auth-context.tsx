@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 import { User } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import type { AuthChangeEvent, Session, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js'
@@ -18,6 +18,8 @@ interface AuthResult {
   success: boolean
   error?: string
   needsEmailConfirmation?: boolean
+  // The password was right; the emailed sign-in code must be entered next.
+  needsVerification?: boolean
   role?: User['role']
 }
 
@@ -26,11 +28,34 @@ interface AuthContextType {
   login: (email: string, password: string, captchaToken?: string) => Promise<AuthResult>
   register: (data: RegisterData) => Promise<AuthResult>
   logout: () => Promise<void>
+  // Set while signed in with a password but before this session's emailed
+  // code has been entered. `user` stays null until then.
+  pendingVerificationEmail: string | null
+  verifyLoginCode: (code: string) => Promise<AuthResult>
+  resendLoginCode: () => Promise<{ success: boolean; error?: string }>
   isLoading: boolean
   refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+// Every new sign-in session must enter a code emailed to the account owner
+// before it counts (supabase/migrations/0026_login_verification.sql).
+async function isSessionVerified(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase.rpc('session_verified')
+  if (error) console.error('Session verification check failed:', error)
+  return data === true
+}
+
+async function requestLoginCode(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/auth/login-code', { method: 'POST' })
+    const body = await res.json().catch(() => ({}))
+    return res.ok ? { success: true } : { success: false, error: body.error ?? "Couldn't send your code" }
+  } catch {
+    return { success: false, error: "Couldn't send your code" }
+  }
+}
 
 // Fetches the user's profile row, creating it from auth metadata if this is
 // their first session after confirming their email (the profile can't be
@@ -78,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // client in the browser, so seeding this from `supabase` would mismatch
   // during hydration). The effect below resolves it in every code path.
   const [isLoading, setIsLoading] = useState(true)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null)
+  // Whose profile is loaded, so token refreshes don't reload it.
+  const loadedUserId = useRef<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -88,30 +116,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Subscribing replays the current session as INITIAL_SESSION, so this one
     // listener covers page load, sign-in, sign-out and account changes.
-    let loadedUserId: string | null = null
     let cancelled = false
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       const authUser = session?.user ?? null
 
       if (!authUser) {
-        loadedUserId = null
+        loadedUserId.current = null
         setUser(null)
+        setPendingVerificationEmail(null)
         setIsLoading(false)
         return
       }
 
       // Tokens refresh about hourly and whenever the tab regains focus; the
       // profile only needs reloading for a different person or an edit.
-      if (authUser.id === loadedUserId && event !== 'USER_UPDATED') return
-      loadedUserId = authUser.id
+      if (authUser.id === loadedUserId.current && event !== 'USER_UPDATED') return
 
       // Supabase calls this while holding its auth lock, and a query from
       // inside it can wait on that same lock. Load the profile just after.
       setTimeout(async () => {
         try {
+          if (!(await isSessionVerified(supabase))) {
+            // Signed in with a password, but the emailed code isn't in yet.
+            if (!cancelled) {
+              loadedUserId.current = null
+              setUser(null)
+              setPendingVerificationEmail(authUser.email ?? '')
+            }
+            return
+          }
           const profile = await loadUserProfile(supabase, authUser)
-          if (!cancelled) setUser(profile)
+          if (cancelled) return
+          loadedUserId.current = profile ? authUser.id : null
+          setPendingVerificationEmail(null)
+          setUser(profile)
         } catch (error) {
           console.error('Auth profile load error:', error)
         } finally {
@@ -142,16 +181,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Login failed' }
       }
 
-      const profile = await loadUserProfile(supabase, data.user)
+      // Password is right; now the emailed code. This is a new session, so
+      // it always needs one.
+      setPendingVerificationEmail(data.user.email ?? email)
+      const sent = await requestLoginCode()
+      return { success: true, needsVerification: true, error: sent.error }
+    } catch (error) {
+      console.error('Login error:', error)
+      return { success: false, error: 'Login failed' }
+    }
+  }
+
+  const verifyLoginCode = async (code: string): Promise<AuthResult> => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase not initialized' }
+    }
+
+    try {
+      const res = await fetch('/api/auth/login-code/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        return { success: false, error: body.error ?? 'Verification failed' }
+      }
+
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
+        return { success: false, error: 'Please sign in again.' }
+      }
+
+      const profile = await loadUserProfile(supabase, authUser)
       if (!profile) {
         return { success: false, error: 'Failed to load your profile. Please try again.' }
       }
 
+      loadedUserId.current = authUser.id
+      setPendingVerificationEmail(null)
       setUser(profile)
       return { success: true, role: profile.role }
     } catch (error) {
-      console.error('Login error:', error)
-      return { success: false, error: 'Login failed' }
+      console.error('Verify code error:', error)
+      return { success: false, error: 'Verification failed' }
     }
   }
 
@@ -197,18 +270,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: true, needsEmailConfirmation: true }
       }
 
-      const profile = await loadUserProfile(supabase, authData.user, {
-        name: data.name,
-        phone: data.phone,
-        address: data.address,
-      })
-
-      if (!profile) {
-        return { success: false, error: 'Account created, but failed to set up your profile' }
-      }
-
-      setUser(profile)
-      return { success: true }
+      // Signed straight in (email confirmation is off): this session needs
+      // the emailed code like any other. The profile row is created from the
+      // signup metadata once it's verified.
+      setPendingVerificationEmail(authData.user.email ?? data.email)
+      const sent = await requestLoginCode()
+      return { success: true, needsVerification: true, error: sent.error }
     } catch (error) {
       console.error('Register error:', error)
       return { success: false, error: 'Registration failed' }
@@ -219,7 +286,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!supabase) return
       await supabase.auth.signOut()
+      loadedUserId.current = null
       setUser(null)
+      setPendingVerificationEmail(null)
     } catch (error) {
       console.error('Logout error:', error)
     }
@@ -229,7 +298,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!supabase) return
       const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-      if (supabaseUser) {
+      if (supabaseUser && (await isSessionVerified(supabase))) {
         const profile = await loadUserProfile(supabase, supabaseUser)
         setUser(profile)
       }
@@ -239,7 +308,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, refreshUser }}>
+    <AuthContext.Provider value={{
+      user, login, register, logout, isLoading, refreshUser,
+      pendingVerificationEmail, verifyLoginCode, resendLoginCode: requestLoginCode,
+    }}>
       {children}
     </AuthContext.Provider>
   )

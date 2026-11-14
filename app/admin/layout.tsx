@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getVerifiedUser } from '@/lib/api'
 import { AdminShell } from '@/components/admin/admin-shell'
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
 
   if (!user) {
     redirect('/login')

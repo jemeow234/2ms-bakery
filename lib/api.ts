@@ -11,6 +11,18 @@ export interface AdminContext {
 }
 
 /**
+ * The signed-in user, but only once this session's sign-in email code has
+ * been entered (supabase/migrations/0026_login_verification.sql). A session
+ * that has only passed the password step counts as signed out here.
+ */
+export async function getVerifiedUser(supabase: ServerSupabase): Promise<User | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data: verified } = await supabase.rpc('session_verified')
+  return verified === true ? user : null
+}
+
+/**
  * Resolves the signed-in admin for an /api/admin route, or the 401/403
  * response to send instead:
  *
@@ -19,7 +31,7 @@ export interface AdminContext {
  */
 export async function requireAdmin(): Promise<AdminContext | { response: NextResponse }> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getVerifiedUser(supabase)
 
   if (!user) {
     return { response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }

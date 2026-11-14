@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { serverError } from '@/lib/api'
+import { serverError, getVerifiedUser } from '@/lib/api'
 import { notifyOrderCancelled } from '@/lib/email/notify-order-cancelled'
 import { clientIp, underRateLimit } from '@/lib/rate-limit'
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getVerifiedUser(supabase)
 
     if (!user) {
       return NextResponse.json({ error: 'Please sign in to cancel an order.' }, { status: 401 })
