@@ -110,7 +110,7 @@ export function Navbar() {
             size="sm"
             className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground"
           >
-            <Link href={user ? '/profile' : '/login?next=/profile'}>
+            <Link href={user ? '/profile' : '/login?next=/profile'} data-tour="account">
               <UserCircle className="h-4 w-4" />
               Profile
             </Link>
@@ -119,6 +119,7 @@ export function Navbar() {
           <Button asChild variant="ghost" size="icon" className="relative">
             <Link
               href="/checkout"
+              data-tour="cart"
               aria-label={totalItems > 0 ? `Cart, ${totalItems} item${totalItems === 1 ? '' : 's'}` : 'Cart'}
             >
               <ShoppingBag className="h-5 w-5" />
@@ -138,7 +139,7 @@ export function Navbar() {
                 </Button>
               )}
               <Button asChild variant="ghost" size="icon" className="hidden sm:inline-flex">
-                <Link href="/orders" aria-label="My orders">
+                <Link href="/orders" aria-label="My orders" data-tour="orders">
                   <ClipboardList className="h-5 w-5" />
                 </Link>
               </Button>
@@ -148,7 +149,7 @@ export function Navbar() {
             </div>
           ) : (
             <Button asChild variant="ghost" size="icon">
-              <Link href="/login" aria-label="Log in">
+              <Link href="/login" aria-label="Log in" data-tour="account">
                 <User className="h-5 w-5" />
               </Link>
             </Button>

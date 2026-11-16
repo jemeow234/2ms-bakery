@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import { LogoMark } from '@/components/logo-mark'
+import { TakeTourLink } from '@/components/take-tour-link'
 import { BAKERY_ORIGIN } from '@/lib/delivery'
 import { SHOP_EMAIL, SHOP_PHONE } from '@/lib/shop'
 
@@ -47,7 +48,8 @@ export function Footer() {
           <p className="text-background/50 text-sm">
             &copy; {new Date().getFullYear()} 2M&apos;s Bakery. All rights reserved.
           </p>
-          <div className="flex gap-6 text-sm text-background/50">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-background/50">
+            <TakeTourLink className="hover:text-primary transition-colors" />
             <Link href="/faqs" className="hover:text-primary transition-colors">
               FAQs
             </Link>

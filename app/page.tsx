@@ -6,6 +6,7 @@ import { ProductsSection } from '@/components/sections/products-section'
 import { ContactSection } from '@/components/sections/contact-section'
 import { Footer } from '@/components/footer'
 import { LoginAnnouncement } from '@/components/login-announcement'
+import { OnboardingTour } from '@/components/onboarding-tour'
 import { createPublicClient } from '@/lib/supabase/public'
 import type { Product } from '@/lib/types'
 
@@ -42,6 +43,7 @@ export default async function HomePage() {
       <ContactSection />
       <Footer />
       <LoginAnnouncement />
+      <OnboardingTour />
     </main>
   )
 }

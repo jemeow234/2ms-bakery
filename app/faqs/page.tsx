@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft, ChevronDown } from 'lucide-react'
 import { LogoMark } from '@/components/logo-mark'
+import { TakeTourLink } from '@/components/take-tour-link'
 import { BAKERY_ORIGIN } from '@/lib/delivery'
 import { SHOP_EMAIL, SHOP_PHONE } from '@/lib/shop'
 
@@ -116,6 +117,14 @@ export default function FaqsPage() {
             </details>
           ))}
         </div>
+
+        <section className="mt-12 rounded-lg border border-border bg-secondary/50 p-4 sm:p-5">
+          <h2 className="font-serif text-2xl font-semibold text-foreground mb-2">New to 2M&apos;s Bakery?</h2>
+          <p className="text-muted-foreground">
+            Take a quick guided tour of how to browse, order, pay and track your order.{' '}
+            <TakeTourLink className="text-primary font-medium hover:underline">Take the tour</TakeTourLink>
+          </p>
+        </section>
 
         <section className="mt-12">
           <h2 className="font-serif text-2xl font-semibold text-foreground mb-3">Contact us</h2>

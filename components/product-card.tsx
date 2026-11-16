@@ -98,6 +98,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
 
         <Button
           size="icon"
+          data-tour="add-to-cart"
           onClick={handleAddToCart}
           disabled={product.stock === 0 || isAdded}
           className={cn(
@@ -281,6 +282,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
           )}
 
           <Button
+            data-tour="add-to-cart"
             onClick={handleAddToCart}
             disabled={product.stock === 0 || isAdded}
             className={cn(

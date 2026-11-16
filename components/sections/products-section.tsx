@@ -56,7 +56,7 @@ export function ProductsSection({ initialProducts = [] }: { initialProducts?: Pr
   return (
     <section id="products" ref={sectionRef} className="py-16 sm:py-24 bg-secondary/30 relative">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
+        <div data-tour="menu" className="text-center mb-12">
           <span
             className={cn(
               'inline-block text-primary font-medium mb-4 transition-all duration-700',
