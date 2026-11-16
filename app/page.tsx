@@ -36,7 +36,7 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen">
       <Navbar />
-      <HeroSection />
+      <HeroSection products={products} />
       <AboutSection />
       <FeaturedSection initialProducts={products} />
       <ProductsSection initialProducts={products} />

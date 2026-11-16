@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import { LogoMark } from '@/components/logo-mark'
+import { HeroSlideshow } from '@/components/hero-slideshow'
+import type { Product } from '@/lib/types'
 
-export function HeroSection() {
+export function HeroSection({ products = [] }: { products?: Product[] }) {
   const heroRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -88,17 +89,7 @@ export function HeroSection() {
           {/* Hero photo */}
           <div className="relative">
             <div className="absolute -inset-6 bg-accent/25 rounded-[2.5rem] rotate-3 hidden sm:block" />
-            <div className="relative aspect-[4/3] sm:aspect-square lg:aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
-              <Image
-                src="/images/bicho.jpg"
-                alt="Freshly fried bicho rolled in sugar, on a bronze tray"
-                fill
-                loading="eager"
-                fetchPriority="high"
-                sizes="(min-width: 1024px) 40vw, (min-width: 640px) 60vw, 90vw"
-                className="object-cover"
-              />
-            </div>
+            <HeroSlideshow products={products} />
             <LogoMark
               sizes="(min-width: 640px) 128px, 80px"
               className="absolute -bottom-5 left-4 sm:-bottom-6 sm:-left-6 w-20 h-20 sm:w-32 sm:h-32 ring-4 ring-background shadow-xl"
