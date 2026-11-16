@@ -51,7 +51,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'checkout',
     title: '5. Check out',
-    body: 'At checkout, choose Pick-up (no minimum) or Delivery (at least 2 items and ₱100, within 1 km, in one-hour time slots). Pay with Cash, or with GCash/InstaPay by scanning our QR and uploading a screenshot of your payment (up to 5 MB).',
+    body: 'At checkout, choose Pick-up (no minimum) or Delivery (at least 2 items and an order total of at least ₱100, within 1 km, in one-hour time slots). Pay with Cash, or with GCash/InstaPay by scanning our QR and uploading a screenshot of your payment (up to 5 MB).',
   },
   {
     id: 'orders',
