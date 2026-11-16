@@ -47,7 +47,6 @@ export function HeroSlideshow({ products }: { products: Product[] }) {
   const [previous, setPrevious] = useState<number | null>(null)
   // Chosen ahead of time so its photo is already loading before it shows.
   const [upcoming, setUpcoming] = useState(slides.length > 1 ? 1 : 0)
-  const [paused, setPaused] = useState(false)
 
   const goTo = (index: number) => {
     if (index === current) return
@@ -57,26 +56,22 @@ export function HeroSlideshow({ products }: { products: Product[] }) {
   }
 
   // Each slide schedules the next one; a manual pick restarts the wait.
+  // With reduced motion the photos still change, just without the fade.
   useEffect(() => {
-    if (slides.length < 2 || paused) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (slides.length < 2) return
     const timer = setTimeout(() => {
       setPrevious(current)
       setCurrent(upcoming)
       setUpcoming(randomOther(slides.length, upcoming))
     }, INTERVAL_MS)
     return () => clearTimeout(timer)
-  }, [slides.length, paused, current, upcoming])
+  }, [slides.length, current, upcoming])
 
   const mounted = new Set([current, upcoming, ...(previous === null ? [] : [previous])])
 
   return (
     <div
       className="relative aspect-[4/3] sm:aspect-square lg:aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl bg-secondary"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
       role="region"
       aria-roledescription="carousel"
       aria-label="Our breads"
