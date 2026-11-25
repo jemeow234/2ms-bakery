@@ -51,30 +51,66 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const allowed =
-      (await underRateLimit(`login-code:user:${session.userId}`, 10, 3600)) &&
-      (await underRateLimit(`login-code:ip:${clientIp(req)}`, 30, 3600))
-    if (!allowed) {
-      return NextResponse.json({ error: 'Too many codes requested. Please try again later.' }, { status: 429 })
-    }
-
     const resend = getResend()
     const isProduction = process.env.NODE_ENV === 'production'
     if (!resend && isProduction) {
       return serverError('login-code', 'RESEND_API_KEY is not set', "We couldn't send your sign-in code.")
     }
 
+    // Claim the right to send in a single statement, so requests that arrive
+    // together can't each send a code: only the one that writes the row sends,
+    // and the code in the inbox is always the one that's stored.
     const code = generateLoginCode()
-    const { error: saveError } = await admin.from('login_verifications').upsert({
+    const codeHash = hashLoginCode(session.sessionId, code)
+    const now = new Date()
+    const row = {
       session_id: session.sessionId,
       user_id: session.userId,
-      code_hash: hashLoginCode(session.sessionId, code),
-      expires_at: new Date(Date.now() + LOGIN_CODE_TTL_MINUTES * 60_000).toISOString(),
+      code_hash: codeHash,
+      expires_at: new Date(now.getTime() + LOGIN_CODE_TTL_MINUTES * 60_000).toISOString(),
       attempts: 0,
-      sent_at: new Date().toISOString(),
+      sent_at: now.toISOString(),
       verified_at: null,
-    })
-    if (saveError) throw saveError
+    }
+
+    let claimed: boolean
+    if (!existing) {
+      const { error } = await admin.from('login_verifications').insert(row)
+      if (error && error.code !== '23505') throw error // 23505: another request got there first
+      claimed = !error
+    } else {
+      let update = admin
+        .from('login_verifications')
+        .update(row)
+        .eq('session_id', session.sessionId)
+        .is('verified_at', null)
+        .lt('sent_at', new Date(now.getTime() - LOGIN_CODE_RESEND_SECONDS * 1000).toISOString())
+      if (ifNoneOutstanding) update = update.lt('expires_at', now.toISOString())
+      const { data, error } = await update.select('session_id')
+      if (error) throw error
+      claimed = (data?.length ?? 0) > 0
+    }
+
+    if (!claimed) {
+      // A code was just sent by a request running alongside this one.
+      return ifNoneOutstanding
+        ? NextResponse.json({ sent: true })
+        : NextResponse.json({ error: 'A code was just sent. Please check your email.' }, { status: 429 })
+    }
+
+    // Counted only for the request that will actually send, so duplicates
+    // that arrive together don't use up the customer's allowance.
+    const allowed =
+      (await underRateLimit(`login-code:user:${session.userId}`, 10, 3600)) &&
+      (await underRateLimit(`login-code:ip:${clientIp(req)}`, 30, 3600))
+    if (!allowed) {
+      await admin
+        .from('login_verifications')
+        .delete()
+        .eq('session_id', session.sessionId)
+        .eq('code_hash', codeHash)
+      return NextResponse.json({ error: 'Too many codes requested. Please try again later.' }, { status: 429 })
+    }
 
     if (!resend) {
       // Local development without mail configured.
@@ -101,7 +137,11 @@ export async function POST(req: NextRequest) {
     if (sendError) {
       // Nothing reached the inbox, so don't leave a code that makes later
       // requests think one is out.
-      await admin.from('login_verifications').delete().eq('session_id', session.sessionId)
+      await admin
+        .from('login_verifications')
+        .delete()
+        .eq('session_id', session.sessionId)
+        .eq('code_hash', codeHash)
       throw sendError
     }
 

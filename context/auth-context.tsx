@@ -115,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // True while login() or register() is sending the code itself, so the
   // auth listener doesn't send a second one for the same session.
   const sendingCodeExplicitly = useRef(false)
+  // Who already had a code sent automatically. Supabase reports one sign-in
+  // as several auth events in a row; this keeps it to one email.
+  const autoCodeSentFor = useRef<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -132,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!authUser) {
         loadedUserId.current = null
+        autoCodeSentFor.current = null
         setUser(null)
         setPendingVerificationEmail(null)
         setIsLoading(false)
@@ -156,7 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Sessions that skipped the password step (the email confirmation
             // link signs new users straight in) were never sent a code.
             // Send one unless an unexpired code is already out.
-            if (!sendingCodeExplicitly.current) {
+            if (!sendingCodeExplicitly.current && autoCodeSentFor.current !== authUser.id) {
+              autoCodeSentFor.current = authUser.id
               const sent = await requestLoginCode({ ifNoneOutstanding: true })
               if (sent.error) console.warn('Automatic sign-in code request failed:', sent.error)
             }
