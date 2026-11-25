@@ -13,9 +13,15 @@ import {
 } from '@/lib/login-code'
 
 // Emails a sign-in code for the caller's current session. Called right after
-// the password step, and again from "Resend code".
+// the password step, and again from "Resend code". With `{ ifNoneOutstanding:
+// true }` it only sends when this session has no unexpired code yet: used for
+// sessions that started without the password step, such as the one the email
+// confirmation link signs a new user into.
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => null)
+    const ifNoneOutstanding = body?.ifNoneOutstanding === true
+
     const session = await currentSession()
     if (!session) {
       return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 })
@@ -25,12 +31,16 @@ export async function POST(req: NextRequest) {
 
     const { data: existing } = await admin
       .from('login_verifications')
-      .select('sent_at, verified_at')
+      .select('sent_at, verified_at, expires_at')
       .eq('session_id', session.sessionId)
       .maybeSingle()
 
     if (existing?.verified_at) {
       return NextResponse.json({ verified: true })
+    }
+
+    if (ifNoneOutstanding && existing && new Date(existing.expires_at).getTime() > Date.now()) {
+      return NextResponse.json({ sent: true })
     }
 
     const sinceLast = existing ? (Date.now() - new Date(existing.sent_at).getTime()) / 1000 : Infinity
@@ -88,7 +98,12 @@ export async function POST(req: NextRequest) {
           If you didn't just try to sign in, someone may know your password — please change it.</p>
         </div>`,
     })
-    if (sendError) throw sendError
+    if (sendError) {
+      // Nothing reached the inbox, so don't leave a code that makes later
+      // requests think one is out.
+      await admin.from('login_verifications').delete().eq('session_id', session.sessionId)
+      throw sendError
+    }
 
     return NextResponse.json({ sent: true })
   } catch (error) {

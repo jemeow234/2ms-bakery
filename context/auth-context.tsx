@@ -47,9 +47,15 @@ async function isSessionVerified(supabase: SupabaseClient): Promise<boolean> {
   return data === true
 }
 
-async function requestLoginCode(): Promise<{ success: boolean; error?: string }> {
+async function requestLoginCode(
+  options: { ifNoneOutstanding?: boolean } = {}
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch('/api/auth/login-code', { method: 'POST' })
+    const res = await fetch('/api/auth/login-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options),
+    })
     const body = await res.json().catch(() => ({}))
     return res.ok ? { success: true } : { success: false, error: body.error ?? "Couldn't send your code" }
   } catch {
@@ -106,6 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null)
   // Whose profile is loaded, so token refreshes don't reload it.
   const loadedUserId = useRef<string | null>(null)
+  // True while login() or register() is sending the code itself, so the
+  // auth listener doesn't send a second one for the same session.
+  const sendingCodeExplicitly = useRef(false)
 
   useEffect(() => {
     if (!supabase) {
@@ -144,6 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(null)
               setPendingVerificationEmail(authUser.email ?? '')
             }
+            // Sessions that skipped the password step (the email confirmation
+            // link signs new users straight in) were never sent a code.
+            // Send one unless an unexpired code is already out.
+            if (!sendingCodeExplicitly.current) {
+              const sent = await requestLoginCode({ ifNoneOutstanding: true })
+              if (sent.error) console.warn('Automatic sign-in code request failed:', sent.error)
+            }
             return
           }
           const profile = await loadUserProfile(supabase, authUser)
@@ -170,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Supabase not initialized' }
     }
 
+    sendingCodeExplicitly.current = true
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
 
@@ -189,6 +206,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Login error:', error)
       return { success: false, error: 'Login failed' }
+    } finally {
+      sendingCodeExplicitly.current = false
     }
   }
 
@@ -233,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Supabase not initialized' }
     }
 
+    sendingCodeExplicitly.current = true
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -279,6 +299,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Register error:', error)
       return { success: false, error: 'Registration failed' }
+    } finally {
+      sendingCodeExplicitly.current = false
     }
   }
 
