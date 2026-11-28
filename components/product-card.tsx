@@ -43,7 +43,7 @@ export function ProductCard({ product, variant = 'grid', options = [] }: Product
       )
       return
     }
-    addToCart(product, quantity)
+    if (!addToCart(product, quantity)) return
     setIsAdded(true)
     toast.success(`Added ${quantity} ${product.name} to cart`)
     setTimeout(() => {

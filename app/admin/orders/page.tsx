@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   XCircle,
   Truck,
+  ChefHat,
 } from 'lucide-react'
 import { cn, formatPaymentMethod } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -34,7 +35,8 @@ import { formatSchedule } from '@/lib/delivery'
 
 const statusConfig = {
   pending: { label: 'Pending', color: 'bg-orange-500/10 text-orange-600', icon: Clock },
-  processing: { label: 'Processing', color: 'bg-blue-500/10 text-blue-600', icon: Truck },
+  processing: { label: 'Processing', color: 'bg-blue-500/10 text-blue-600', icon: ChefHat },
+  out_for_delivery: { label: 'Out for Delivery', color: 'bg-violet-500/10 text-violet-600', icon: Truck },
   completed: { label: 'Completed', color: 'bg-green-500/10 text-green-600', icon: CheckCircle2 },
   cancelled: { label: 'Cancelled', color: 'bg-destructive/10 text-destructive', icon: XCircle },
 }
@@ -65,11 +67,12 @@ export default function OrdersPage() {
       toast.error('Failed to update order status. Please try again.')
       return
     }
-    toast.success(`Order status updated to ${newStatus}`)
+    toast.success(`Order status updated to ${statusConfig[newStatus].label}`)
   }
 
   const pendingCount = orders.filter(o => o.status === 'pending').length
   const processingCount = orders.filter(o => o.status === 'processing').length
+  const outForDeliveryCount = orders.filter(o => o.status === 'out_for_delivery').length
   const completedCount = orders.filter(o => o.status === 'completed').length
   const todayRevenue = orders
     .filter(o => {
@@ -86,7 +89,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card className="border-border">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-orange-600 flex items-center gap-2">
@@ -101,12 +104,23 @@ export default function OrdersPage() {
         <Card className="border-border">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-blue-600 flex items-center gap-2">
-              <Truck className="h-4 w-4" />
+              <ChefHat className="h-4 w-4" />
               Processing
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{processingCount}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-violet-600 flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              Out for Delivery
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{outForDeliveryCount}</div>
           </CardContent>
         </Card>
         <Card className="border-border">
@@ -161,6 +175,7 @@ export default function OrdersPage() {
             <SelectItem value="all">All Orders</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="processing">Processing</SelectItem>
+            <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
@@ -249,12 +264,15 @@ export default function OrdersPage() {
                                 handleStatusChange(order.id, value)
                               }
                             >
-                              <SelectTrigger className="w-[130px] h-8">
+                              <SelectTrigger className="w-[150px] h-8">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="pending">Pending</SelectItem>
                                 <SelectItem value="processing">Processing</SelectItem>
+                                {order.deliveryType === 'delivery' && (
+                                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
+                                )}
                                 <SelectItem value="completed">Completed</SelectItem>
                                 <SelectItem value="cancelled">Cancelled</SelectItem>
                               </SelectContent>

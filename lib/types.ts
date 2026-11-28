@@ -36,7 +36,7 @@ export interface Order {
   customerPhone: string
   address: string
   deliveryType: 'delivery' | 'pickup'
-  status: 'pending' | 'processing' | 'completed' | 'cancelled'
+  status: 'pending' | 'processing' | 'out_for_delivery' | 'completed' | 'cancelled'
   createdAt: string
   paymentMethod: 'cash' | 'gcash'
   distance?: number

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdmin, serverError } from '@/lib/api'
 
 const statusSchema = z.object({
-  status: z.enum(['pending', 'processing', 'completed', 'cancelled']),
+  status: z.enum(['pending', 'processing', 'out_for_delivery', 'completed', 'cancelled']),
 })
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,6 +28,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (error?.message === 'ORDER_NOT_FOUND') {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 })
+    }
+    if (error?.message === 'NOT_DELIVERY') {
+      return NextResponse.json(
+        { error: 'Only delivery orders can be marked out for delivery.' },
+        { status: 400 }
+      )
     }
     if (error?.message === 'ORDER_CLOSED') {
       return NextResponse.json(

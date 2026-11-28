@@ -5,6 +5,10 @@ import { requireAdmin, serverError } from '@/lib/api'
 import type { InventoryLog } from '@/lib/types'
 
 const LOG_LIMIT = 50
+// A date-ranged read (the reports page) can cover a month of sales, more
+// than one response holds, so it is read in pages up to a cap.
+const RANGE_PAGE_SIZE = 1000
+const RANGE_MAX_PAGES = 20
 
 interface InventoryLogRow {
   id: string
@@ -30,22 +34,54 @@ const stockSchema = z
     message: 'Adding or removing needs a quantity of at least 1.',
   })
 
-export async function GET() {
+const rangeSchema = z.object({
+  from: z.iso.datetime({ offset: true }),
+  to: z.iso.datetime({ offset: true }),
+  type: z.enum(['add', 'remove', 'sale', 'adjustment']).optional(),
+})
+
+export async function GET(req: NextRequest) {
   try {
     const admin = await requireAdmin()
     if ('response' in admin) return admin.response
 
-    // The admin pages show the latest few entries; the full history stays in
-    // the database.
-    const { data, error } = await admin.supabase
-      .from('inventory_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(LOG_LIMIT)
+    // Without ?from&to the admin pages get the latest few entries; with them,
+    // every entry in that window (optionally one type), for the reports.
+    const params = Object.fromEntries(req.nextUrl.searchParams)
+    const range = 'from' in params || 'to' in params ? rangeSchema.safeParse(params) : null
+    if (range && !range.success) {
+      return NextResponse.json({ error: 'Invalid date range.' }, { status: 400 })
+    }
 
-    if (error) throw error
+    const baseQuery = () => {
+      let query = admin.supabase
+        .from('inventory_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id')
+      if (range?.success) {
+        query = query.gte('created_at', range.data.from).lte('created_at', range.data.to)
+        if (range.data.type) query = query.eq('type', range.data.type)
+      }
+      return query
+    }
 
-    const logs = ((data ?? []) as InventoryLogRow[]).map(log => ({
+    const rows: InventoryLogRow[] = []
+    if (range?.success) {
+      for (let page = 0; page < RANGE_MAX_PAGES; page++) {
+        const from = page * RANGE_PAGE_SIZE
+        const { data, error } = await baseQuery().range(from, from + RANGE_PAGE_SIZE - 1)
+        if (error) throw error
+        rows.push(...((data ?? []) as InventoryLogRow[]))
+        if (!data || data.length < RANGE_PAGE_SIZE) break
+      }
+    } else {
+      const { data, error } = await baseQuery().limit(LOG_LIMIT)
+      if (error) throw error
+      rows.push(...((data ?? []) as InventoryLogRow[]))
+    }
+
+    const logs = rows.map(log => ({
       id: log.id,
       productId: log.product_id,
       productName: log.product_name,

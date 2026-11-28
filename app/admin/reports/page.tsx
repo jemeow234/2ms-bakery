@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '@/context/store-context'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,10 +15,28 @@ import {
   Printer,
   Clock,
   X,
+  Trophy,
+  TrendingDown,
+  Layers,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { formatCategory } from '@/lib/utils'
 import { shortOrderNumber } from '@/lib/orders'
+import type { InventoryLog } from '@/lib/types'
+
+// Categorical slots 1-5 of the dataviz reference palette, in fixed order
+// (validated for color-vision deficiency on a white surface). Everything past
+// the top five folds into a neutral "Other".
+const SERIES_COLORS = ['#257de0', '#f47230', '#00b894', '#f2a600', '#ee7fac']
+const OTHER_COLOR = '#b4b4b4'
+const TOP_SERIES = SERIES_COLORS.length
+const LOW_STOCK = 10
+
+// create_order() notes each sale "Order #<order id>".
+const orderIdFromNote = (note?: string) => note?.match(/^Order #([0-9a-f-]{36})$/i)?.[1]
+
+// Bucket labels use a newline between weekday and date.
+const oneLine = (label: string) => label.replace(/\n/g, ' ')
 
 type FilterPeriod = 'daily' | 'weekly' | 'monthly'
 
@@ -100,28 +118,6 @@ export default function ReportsPage() {
     const cancelledOrders = filteredOrders.filter(o => o.status === 'cancelled').length
 
     const averageOrderValue = completedOrders > 0 ? totalRevenue / completedOrders : 0
-
-    // Best selling products
-    const productSales: Record<string, { name: string; quantity: number; revenue: number }> = {}
-    filteredOrders
-      .filter(o => o.status === 'completed')
-      .forEach(order => {
-        order.items.forEach(item => {
-          if (!productSales[item.product.id]) {
-            productSales[item.product.id] = {
-              name: item.product.name,
-              quantity: 0,
-              revenue: 0,
-            }
-          }
-          productSales[item.product.id].quantity += item.quantity
-          productSales[item.product.id].revenue += item.product.price * item.quantity
-        })
-      })
-
-    const bestSellers = Object.values(productSales)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5)
 
     // Category breakdown
     // order_items only snapshot id/name/price, not category — look it up from
@@ -217,13 +213,122 @@ export default function ReportsPage() {
       completedOrders,
       cancelledOrders,
       averageOrderValue,
-      bestSellers,
       categoryRevenue,
       salesData,
       inventoryValue,
       salesHistory,
+      rangeStart: startDate.getTime(),
+      rangeEnd: endDate.getTime(),
+      bucketLabels: Object.keys(salesData),
     }
   }, [orders, products, filterPeriod, selectedMonth, selectedDate, selectedWeek])
+
+  // Stock-out ("sale") records from the inventory log for the selected period,
+  // tagged with their range so a slow response can't fill in a newer period.
+  const { rangeStart, rangeEnd } = stats
+  const rangeKey = `${rangeStart}-${rangeEnd}`
+  const [saleLogs, setSaleLogs] = useState<{ key: string; logs: InventoryLog[] } | null>(null)
+  const [saleLogsError, setSaleLogsError] = useState<{ key: string; message: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const key = `${rangeStart}-${rangeEnd}`
+    const params = new URLSearchParams({
+      from: new Date(rangeStart).toISOString(),
+      to: new Date(rangeEnd).toISOString(),
+      type: 'sale',
+    })
+    const loadSaleLogs = async () => {
+      try {
+        const res = await fetch(`/api/admin/inventory?${params}`)
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error)
+        if (!cancelled) setSaleLogs({ key, logs: data.logs || [] })
+      } catch (error) {
+        console.error('[reports] Failed to load stock records:', error)
+        if (!cancelled) setSaleLogsError({ key, message: "Couldn't load the stock records for this period." })
+      }
+    }
+    loadSaleLogs()
+    return () => {
+      cancelled = true
+    }
+  }, [rangeStart, rangeEnd])
+
+  const stockError = saleLogsError?.key === rangeKey ? saleLogsError.message : null
+
+  const productPerformance = useMemo(() => {
+    if (!saleLogs || saleLogs.key !== rangeKey) return null
+
+    // A cancelled order's stock went back on the shelf, so it didn't sell.
+    const cancelledOrderIds = new Set(orders.filter(o => o.status === 'cancelled').map(o => o.id))
+    const sales = saleLogs.logs.filter(log => {
+      const orderId = orderIdFromNote(log.note)
+      return !orderId || !cancelledOrderIds.has(orderId)
+    })
+    const keyOf = (log: InventoryLog) => log.productId || `name:${log.productName}`
+
+    const byProduct = new Map<string, { id: string; name: string; quantity: number }>()
+    // Every product on the menu is ranked, including ones that sold nothing.
+    for (const p of products) byProduct.set(p.id, { id: p.id, name: p.name, quantity: 0 })
+    for (const log of sales) {
+      const id = keyOf(log)
+      const entry = byProduct.get(id) ?? { id, name: log.productName, quantity: 0 }
+      entry.quantity += log.quantity
+      byProduct.set(id, entry)
+    }
+
+    const ranked = [...byProduct.values()].sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name))
+    const totalSold = ranked.reduce((sum, p) => sum + p.quantity, 0)
+    const stockById = new Map(products.map(p => [p.id, p.stock]))
+    const onMenu = ranked.filter(p => stockById.has(p.id))
+
+    const top = ranked.filter(p => p.quantity > 0).slice(0, TOP_SERIES)
+    const least = [...onMenu].sort((a, b) => a.quantity - b.quantity || a.name.localeCompare(b.name)).slice(0, 5)
+    const bestSeller = top[0] ?? null
+
+    // Stacked columns: the period's top five products, the rest as "Other".
+    const series = top
+    const seriesIndex = new Map(series.map((p, i) => [p.id, i]))
+    const buckets = stats.bucketLabels.map(label => ({
+      label,
+      values: new Array<number>(series.length + 1).fill(0),
+      total: 0,
+    }))
+    for (const log of sales) {
+      const date = new Date(log.createdAt)
+      const index =
+        filterPeriod === 'daily' ? date.getHours() : filterPeriod === 'weekly' ? date.getDay() : date.getDate() - 1
+      const bucket = buckets[index]
+      if (!bucket) continue
+      const slot = seriesIndex.get(keyOf(log)) ?? series.length
+      bucket.values[slot] += log.quantity
+      bucket.total += log.quantity
+    }
+    const otherTotal = totalSold - series.reduce((sum, p) => sum + p.quantity, 0)
+
+    return {
+      totalSold,
+      top,
+      least,
+      bestSeller,
+      bestSellerStock: bestSeller ? stockById.get(bestSeller.id) : undefined,
+      unsold: onMenu.filter(p => p.quantity === 0),
+      series,
+      otherTotal,
+      buckets,
+      maxBucket: Math.max(1, ...buckets.map(b => b.total)),
+    }
+  }, [saleLogs, rangeKey, orders, products, stats.bucketLabels, filterPeriod])
+
+  const [hoveredBucket, setHoveredBucket] = useState<number | null>(null)
+  const periodPhrase =
+    filterPeriod === 'daily' ? 'on this day' : filterPeriod === 'weekly' ? 'this week' : 'this month'
+  const seriesColor = (slot: number) =>
+    productPerformance && slot < productPerformance.series.length ? SERIES_COLORS[slot] : OTHER_COLOR
+  const seriesName = (slot: number) =>
+    productPerformance && slot < productPerformance.series.length ? productPerformance.series[slot].name : 'Other'
+
 
   const visibleHistory = useMemo(() => {
     const query = historySearch.trim().toLowerCase()
@@ -269,8 +374,11 @@ export default function ReportsPage() {
       ['Average Order Value', formatCurrency(stats.averageOrderValue)],
       ['Inventory Value', formatCurrency(stats.inventoryValue)],
       [''],
-      ['Best Sellers', ''],
-      ...stats.bestSellers.map(p => [p.name, `${p.quantity} sold - ${formatCurrency(p.revenue)}`]),
+      ['Best Sellers (stock records)', ''],
+      ...(productPerformance?.top ?? []).map(p => [p.name, `${p.quantity} sold`]),
+      [''],
+      ['Least Selling (stock records)', ''],
+      ...(productPerformance?.least ?? []).map(p => [p.name, `${p.quantity} sold`]),
       [''],
       ['Sales History', ''],
       ['Order #', 'Product', 'Qty', 'Unit Price', 'Total', 'Payment', 'Type', 'Customer'],
@@ -473,36 +581,103 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
-            {/* Best Sellers */}
+            {/* Best & least selling, from the stock records */}
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="text-foreground flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  Best Selling Products
+                  Best &amp; Least Selling
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  From the stock-out records in the inventory log. Cancelled orders don&apos;t count.
+                </p>
               </CardHeader>
-              <CardContent>
-                {stats.bestSellers.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No sales data yet</p>
+              <CardContent className="space-y-5">
+                {stockError ? (
+                  <p className="text-destructive text-sm text-center py-8">{stockError}</p>
+                ) : !productPerformance ? (
+                  <p className="text-muted-foreground text-center py-8">Loading stock records...</p>
                 ) : (
-                  <div className="space-y-4">
-                    {stats.bestSellers.map((product, index) => (
-                      <div key={product.name} className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">{product.quantity} sold</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-foreground">
-                            {formatCurrency(product.revenue)}
+                  <>
+                    {productPerformance.bestSeller ? (
+                      <div className="rounded-lg bg-primary/10 p-4 flex gap-3" role="note">
+                        <Trophy className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <div className="text-sm text-foreground space-y-1">
+                          <p>
+                            <span className="font-semibold">Best seller: {productPerformance.bestSeller.name}.</span>{' '}
+                            {productPerformance.bestSeller.quantity} pcs sold {periodPhrase},{' '}
+                            {Math.round((productPerformance.bestSeller.quantity / productPerformance.totalSold) * 100)}% of
+                            the {productPerformance.totalSold} pcs that left the shelf.
                           </p>
+                          {productPerformance.bestSellerStock !== undefined && (
+                            <p className="text-muted-foreground">
+                              {productPerformance.bestSellerStock <= LOW_STOCK
+                                ? `Only ${productPerformance.bestSellerStock} left in stock. Consider baking more.`
+                                : `${productPerformance.bestSellerStock} left in stock.`}
+                            </p>
+                          )}
+                          {productPerformance.unsold.length > 0 && (
+                            <p className="text-muted-foreground">
+                              {productPerformance.unsold.length === 1
+                                ? `${productPerformance.unsold[0].name} didn't sell ${periodPhrase}.`
+                                : `${productPerformance.unsold.length} products didn't sell ${periodPhrase}.`}{' '}
+                              Consider a promo or baking fewer.
+                            </p>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-4">No sales recorded {periodPhrase}</p>
+                    )}
+
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      <div>
+                        <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5 mb-3">
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          Top sellers
+                        </h3>
+                        {productPerformance.top.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No sales yet</p>
+                        ) : (
+                          <ol className="space-y-2">
+                            {productPerformance.top.map((p, index) => (
+                              <li key={p.id} className="flex items-center gap-3 text-sm">
+                                <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                                  {index + 1}
+                                </span>
+                                <span className="flex-1 truncate text-foreground">{p.name}</span>
+                                <span className="text-muted-foreground tabular-nums">{p.quantity} pcs</span>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5 mb-3">
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                          Least selling
+                        </h3>
+                        {productPerformance.least.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No products on the menu</p>
+                        ) : (
+                          <ol className="space-y-2">
+                            {productPerformance.least.map(p => (
+                              <li key={p.id} className="flex items-center gap-3 text-sm">
+                                <span className="flex-1 truncate text-foreground">{p.name}</span>
+                                {p.quantity === 0 ? (
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                                    No sales
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground tabular-nums">{p.quantity} pcs</span>
+                                )}
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -549,6 +724,148 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* What sells most: pieces per product, stacked per hour/day */}
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground flex items-center gap-2">
+                <Layers className="h-5 w-5 text-primary" />
+                What Sells Most
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Pieces sold per {filterPeriod === 'daily' ? 'hour' : 'day'}, split by product.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {stockError ? (
+                <p className="text-destructive text-sm text-center py-8">{stockError}</p>
+              ) : !productPerformance ? (
+                <p className="text-muted-foreground text-center py-8">Loading stock records...</p>
+              ) : productPerformance.totalSold === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No sales recorded {periodPhrase}</p>
+              ) : (
+                <>
+                  {/* Legend: the identity channel, with each product's total */}
+                  <ul className="flex flex-wrap gap-x-5 gap-y-2 mb-4 text-sm" aria-label="Legend">
+                    {[...productPerformance.series.keys(), ...(productPerformance.otherTotal > 0 ? [productPerformance.series.length] : [])].map(slot => (
+                      <li key={slot} className="flex items-center gap-2">
+                        <span className="h-3 w-3 rounded-sm shrink-0" style={{ background: seriesColor(slot) }} aria-hidden="true" />
+                        <span className="text-foreground">{seriesName(slot)}</span>
+                        <span className="text-muted-foreground tabular-nums">
+                          {slot < productPerformance.series.length
+                            ? productPerformance.series[slot].quantity
+                            : productPerformance.otherTotal}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Breakdown of the hovered/focused column; sits outside the scroll area so it never clips */}
+                  <div className="min-h-[2.75rem] mb-2 rounded-lg bg-secondary/60 px-3 py-2 text-xs" aria-live="polite">
+                    {hoveredBucket !== null && productPerformance.buckets[hoveredBucket]?.total > 0 ? (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="font-semibold text-foreground">
+                          {oneLine(productPerformance.buckets[hoveredBucket].label)} ·{' '}
+                          {productPerformance.buckets[hoveredBucket].total} pcs
+                        </span>
+                        {productPerformance.buckets[hoveredBucket].values.map((value, slot) =>
+                          value > 0 ? (
+                            <span key={slot} className="flex items-center gap-1.5">
+                              <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: seriesColor(slot) }} aria-hidden="true" />
+                              <span className="text-foreground">{seriesName(slot)}</span>
+                              <span className="text-muted-foreground tabular-nums">{value}</span>
+                            </span>
+                          ) : null
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Hover over a column (or tab to it) to see what sold.</span>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <div className="flex items-end gap-1 min-w-max px-2 pt-2 pb-2">
+                      {productPerformance.buckets.map((bucket, index) => {
+                        const height = (bucket.total / productPerformance.maxBucket) * 100
+                        const segments = bucket.values
+                          .map((value, slot) => ({ value, slot }))
+                          .filter(segment => segment.value > 0)
+                        return (
+                          <div
+                            key={bucket.label}
+                            tabIndex={bucket.total > 0 ? 0 : -1}
+                            onMouseEnter={() => setHoveredBucket(index)}
+                            onMouseLeave={() => setHoveredBucket(null)}
+                            onFocus={() => setHoveredBucket(index)}
+                            onBlur={() => setHoveredBucket(null)}
+                            aria-label={`${oneLine(bucket.label)}: ${bucket.total} pcs`}
+                            className="relative flex-1 min-w-12 flex flex-col items-center outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                          >
+                            <div className="h-48 w-full flex flex-col items-center justify-end border-b border-border">
+                              {bucket.total > 0 && (
+                                <span className="text-xs text-muted-foreground mb-1 tabular-nums">{bucket.total}</span>
+                              )}
+                              {/* Slot 1 sits on the baseline; 2px surface gaps between segments */}
+                              <div
+                                className="w-full max-w-6 flex flex-col-reverse gap-[2px] rounded-t overflow-hidden"
+                                style={{ height: `${height}%` }}
+                              >
+                                {segments.map(segment => (
+                                  <div
+                                    key={segment.slot}
+                                    style={{
+                                      flexGrow: segment.value,
+                                      flexBasis: 0,
+                                      minHeight: 2,
+                                      background: seriesColor(segment.slot),
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <span className="mt-2 text-xs text-muted-foreground text-center whitespace-pre-line">
+                              {bucket.label}
+                            </span>
+
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <details className="mt-4 text-sm">
+                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Show as table</summary>
+                    <table className="w-full mt-2">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-2 px-3 font-medium text-muted-foreground">Product</th>
+                          <th className="text-right py-2 px-3 font-medium text-muted-foreground">Pieces sold</th>
+                          <th className="text-right py-2 px-3 font-medium text-muted-foreground">Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...productPerformance.series.keys(), ...(productPerformance.otherTotal > 0 ? [productPerformance.series.length] : [])].map(slot => {
+                          const quantity =
+                            slot < productPerformance.series.length
+                              ? productPerformance.series[slot].quantity
+                              : productPerformance.otherTotal
+                          return (
+                            <tr key={slot} className="border-b border-border last:border-0">
+                              <td className="py-2 px-3 text-foreground">{seriesName(slot)}</td>
+                              <td className="py-2 px-3 text-right tabular-nums">{quantity}</td>
+                              <td className="py-2 px-3 text-right tabular-nums text-muted-foreground">
+                                {Math.round((quantity / productPerformance.totalSold) * 100)}%
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </details>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Sales Chart */}
           <Card className="border-border">

@@ -63,6 +63,7 @@ export function shortOrderNumber(id: string): string {
 export const ORDER_STATUS_LABELS: Record<Order['status'], string> = {
   pending: 'Received',
   processing: 'Being prepared',
+  out_for_delivery: 'Out for delivery',
   completed: 'Completed',
   cancelled: 'Cancelled',
 }

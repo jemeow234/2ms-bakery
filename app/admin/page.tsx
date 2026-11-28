@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatCategory } from '@/lib/utils'
+import { ORDER_STATUS_LABELS } from '@/lib/orders'
 
 export default function AdminDashboard() {
   const { products, adminOrders: orders, inventoryLogs } = useStore()
@@ -154,9 +155,11 @@ export default function AdminDashboard() {
                           ? 'bg-orange-500/10 text-orange-600'
                           : order.status === 'processing'
                           ? 'bg-blue-500/10 text-blue-600'
+                          : order.status === 'out_for_delivery'
+                          ? 'bg-violet-500/10 text-violet-600'
                           : 'bg-destructive/10 text-destructive'
                       }`}>
-                        {order.status}
+                        {ORDER_STATUS_LABELS[order.status]}
                       </span>
                     </div>
                   </div>

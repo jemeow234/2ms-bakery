@@ -71,7 +71,11 @@ function VariantPicker({
       if (onAdd(selected, quantity) !== false) onAdded()
       return
     }
-    addToCart(selected, quantity)
+    if (!addToCart(selected, quantity)) {
+      // The sign-in prompt takes over; close this so it isn't stacked behind.
+      onAdded()
+      return
+    }
     toast.success(`Added ${quantity} ${selected.name} to cart`)
     onAdded()
   }

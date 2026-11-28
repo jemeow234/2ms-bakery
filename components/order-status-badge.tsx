@@ -5,6 +5,7 @@ import type { Order } from '@/lib/types'
 const STATUS_COLORS: Record<Order['status'], string> = {
   pending: 'text-yellow-800 bg-yellow-100',
   processing: 'text-blue-800 bg-blue-100',
+  out_for_delivery: 'text-violet-800 bg-violet-100',
   completed: 'text-green-800 bg-green-100',
   cancelled: 'text-red-800 bg-red-100',
 }

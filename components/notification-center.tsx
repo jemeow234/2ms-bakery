@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from 
 import { Button } from '@/components/ui/button'
 import { Bell, ShoppingBag, Truck, Store, Clock, Mail, Megaphone, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { shortOrderNumber } from '@/lib/orders'
+import { ORDER_STATUS_LABELS, shortOrderNumber } from '@/lib/orders'
 
 type Tab = 'orders' | 'announcements'
 
@@ -34,7 +34,7 @@ export function NotificationCenter() {
   // was typed at checkout. Copied so sorting below can't reorder store state.
   const userOrders = user ? [...orders] : []
   // The badge counts orders still on their way; cancelled ones are done too.
-  const unreadOrders = userOrders.filter(o => o.status === 'pending' || o.status === 'processing').length
+  const unreadOrders = userOrders.filter(o => o.status === 'pending' || o.status === 'processing' || o.status === 'out_for_delivery').length
   const unseenAnnouncements = announcements.filter(a =>
     !lastSeenAnnouncementAt || new Date(a.startsAt).getTime() > new Date(lastSeenAnnouncementAt).getTime()
   ).length
@@ -72,6 +72,8 @@ export function NotificationCenter() {
         return 'text-green-700 bg-green-100'
       case 'processing':
         return 'text-blue-700 bg-blue-100'
+      case 'out_for_delivery':
+        return 'text-violet-700 bg-violet-100'
       case 'pending':
         return 'text-yellow-700 bg-yellow-100'
       case 'cancelled':
@@ -199,7 +201,7 @@ export function NotificationCenter() {
                           </p>
                         </div>
                         <span className={cn('px-3 py-1 rounded-full text-xs font-medium capitalize', getStatusColor(order.status))}>
-                          {order.status}
+                          {ORDER_STATUS_LABELS[order.status]}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">

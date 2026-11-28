@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, ClipboardList, KeyRound, Loader2, LogIn, LogOut } from 'lucide-react'
+import { ArrowLeft, ChevronRight, ClipboardList, KeyRound, Loader2, LogIn, LogOut, MailCheck, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -138,11 +138,7 @@ function ProfileDetails({ user }: { user: User }) {
       <form onSubmit={handleSubmit} className="bg-card rounded-xl border border-border p-5 space-y-5">
         <h2 className="font-semibold text-foreground">Personal details</h2>
 
-        <div>
-          <Label htmlFor="profile-email">Email</Label>
-          <Input id="profile-email" value={user.email} disabled className="mt-2" />
-          <p className="text-xs text-muted-foreground mt-1">Your sign-in email can&apos;t be changed here.</p>
-        </div>
+        <EmailField currentEmail={user.email} />
 
         <div>
           <Label htmlFor="profile-name">Full name</Label>
@@ -227,6 +223,115 @@ function ProfileDetails({ user }: { user: User }) {
           <span className="flex-1 font-medium">Log out</span>
         </button>
       </div>
+    </div>
+  )
+}
+
+// Changing the sign-in email is its own step: Supabase only switches it once
+// the confirmation link it emails has been clicked.
+function EmailField({ currentEmail }: { currentEmail: string }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
+  const [isSending, setIsSending] = useState(false)
+
+  const cancel = () => {
+    setIsEditing(false)
+    setNewEmail('')
+  }
+
+  const sendChange = async () => {
+    const email = newEmail.trim()
+    if (!email) {
+      toast.error('Please enter your new email')
+      return
+    }
+    if (email.toLowerCase() === currentEmail.toLowerCase()) {
+      toast.error('That is already your email')
+      return
+    }
+
+    setIsSending(true)
+    try {
+      const res = await fetch('/api/users/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(data?.error ?? "Couldn't change your email.")
+        return
+      }
+      setPendingEmail(data.pendingEmail ?? email)
+      cancel()
+      toast.success('Check your inbox to confirm the change')
+    } catch {
+      toast.error("Couldn't change your email. Check your connection and try again.")
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <div>
+      <Label htmlFor={isEditing ? 'profile-new-email' : 'profile-email'}>Email</Label>
+      {isEditing ? (
+        <div className="mt-2 space-y-2">
+          <Input
+            id="profile-new-email"
+            type="email"
+            value={newEmail}
+            onChange={e => setNewEmail(e.target.value)}
+            onKeyDown={e => {
+              // This sits inside the details form; Enter must not save that.
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                sendChange()
+              }
+            }}
+            placeholder="New email address"
+            autoComplete="email"
+            maxLength={254}
+            autoFocus
+          />
+          <p className="text-xs text-muted-foreground">
+            Currently <span className="font-medium text-foreground">{currentEmail}</span>. We&apos;ll email a
+            confirmation link; your email changes once you click it.
+          </p>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" onClick={sendChange} disabled={isSending}>
+              {isSending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+              Update email
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={cancel} disabled={isSending}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2 mt-2">
+            <Input id="profile-email" value={currentEmail} disabled className="flex-1" />
+            <Button type="button" variant="outline" onClick={() => setIsEditing(true)} className="shrink-0">
+              <Pencil className="h-4 w-4 mr-1.5" />
+              Change
+            </Button>
+          </div>
+          {pendingEmail ? (
+            <p className="text-xs text-primary mt-1 flex items-start gap-1.5" role="status">
+              <MailCheck className="h-3.5 w-3.5 mt-px shrink-0" />
+              <span>
+                Confirmation sent to <span className="font-medium">{pendingEmail}</span>. Open the link in that email
+                (and in your current inbox, if one arrives there too) to finish. You&apos;ll sign in with the new email
+                after that.
+              </span>
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">The email you sign in with and get receipts at.</p>
+          )}
+        </>
+      )}
     </div>
   )
 }

@@ -1,12 +1,25 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import Link from 'next/link'
+import { UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Product, CartItem } from '@/lib/types'
 import { useStore } from './store-context'
+import { useAuth } from './auth-context'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface CartContextType {
   items: CartItem[]
-  addToCart: (product: Product, quantity?: number) => void
+  /** False when nothing was added because the visitor must sign in first. */
+  addToCart: (product: Product, quantity?: number) => boolean
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
@@ -36,6 +49,8 @@ function readSavedCart(): CartItem[] {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { products } = useStore()
+  const { user, isLoading: isAuthLoading } = useAuth()
+  const [showAccountPrompt, setShowAccountPrompt] = useState(false)
   const [savedItems, setItems] = useState<CartItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
@@ -62,7 +77,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [savedItems, isLoaded])
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  // Ordering needs an account, so ask for one at the first add rather than
+  // letting a guest fill a cart they can't check out.
+  const addToCart = (product: Product, quantity: number = 1): boolean => {
+    if (!user) {
+      if (isAuthLoading) {
+        toast.info('Just a moment, checking your account...')
+      } else {
+        setShowAccountPrompt(true)
+      }
+      return false
+    }
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id)
       if (existing) {
@@ -74,6 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { product, quantity }]
     })
+    return true
   }
 
   const removeFromCart = (productId: string) => {
@@ -115,6 +141,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      <Dialog open={showAccountPrompt} onOpenChange={setShowAccountPrompt}>
+        <DialogContent className="bg-background max-w-sm">
+          <DialogHeader>
+            <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <UserPlus className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center font-serif text-xl">Create an account to order</DialogTitle>
+            <DialogDescription className="text-center">
+              You need an account to add breads to your cart and check out. It only takes a minute, and we&apos;ll
+              save your details for next time.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Button asChild onClick={() => setShowAccountPrompt(false)}>
+              <Link href="/login?mode=register&next=/%23products">Create an account</Link>
+            </Button>
+            <Button asChild variant="outline" onClick={() => setShowAccountPrompt(false)}>
+              <Link href="/login?next=/%23products">I already have an account</Link>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </CartContext.Provider>
   )
 }

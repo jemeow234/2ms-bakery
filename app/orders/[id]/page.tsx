@@ -18,7 +18,9 @@ export const metadata: Metadata = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-const STEPS: Order['status'][] = ['pending', 'processing', 'completed']
+const PICKUP_STEPS: Order['status'][] = ['pending', 'processing', 'completed']
+// Delivery orders have one more step: on the way to the customer.
+const DELIVERY_STEPS: Order['status'][] = ['pending', 'processing', 'out_for_delivery', 'completed']
 
 interface TrackedOrder {
   id: string
@@ -58,7 +60,8 @@ export default async function OrderStatusPage({ params }: { params: Promise<{ id
 
   const order = data as TrackedOrder
   const schedule = formatSchedule(order.delivery_date, order.delivery_session)
-  const reachedStep = STEPS.indexOf(order.status)
+  const steps = order.delivery_type === 'delivery' ? DELIVERY_STEPS : PICKUP_STEPS
+  const reachedStep = steps.indexOf(order.status)
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +108,7 @@ export default async function OrderStatusPage({ params }: { params: Promise<{ id
             </p>
           ) : (
             <ol className="flex items-center gap-2">
-              {STEPS.map((step, index) => {
+              {steps.map((step, index) => {
                 const done = index <= reachedStep
                 return (
                   <li key={step} className="flex-1 flex items-center gap-2">

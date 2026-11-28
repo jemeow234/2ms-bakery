@@ -45,6 +45,15 @@ export default function LoginPage() {
     setAuthMode(mode)
   }
 
+  // ?mode=register opens the sign-up form, e.g. from the cart's
+  // "Create an account" prompt. Read after mount: the page is prerendered.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mode') === 'register') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthMode('register')
+    }
+  }, [])
+
   const captchaPending = () => {
     if (TURNSTILE_SITE_KEY && !captchaToken) {
       toast.error('Please complete the verification check')
