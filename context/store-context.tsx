@@ -26,8 +26,6 @@ interface StoreContextType {
   ) => Promise<{ order: Order | null; error?: string }>
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>
   cancelOrder: (orderId: string) => Promise<{ ok: boolean; error?: string }>
-  addAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>) => Promise<boolean>
-  deleteAnnouncement: (id: string) => Promise<boolean>
   addFeedback: (
     feedback: Pick<OrderFeedback, 'orderId' | 'rating' | 'comment'>
   ) => Promise<{ ok: boolean; error?: string }>
@@ -397,43 +395,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshProducts])
 
-  const addAnnouncement = useCallback(async (
-    announcementData: Omit<Announcement, 'id' | 'createdAt' | 'createdBy'>
-  ): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/admin/announcements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(announcementData)
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setAnnouncements(prev => [data.announcement, ...prev])
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('[store] Failed to create announcement:', error)
-      return false
-    }
-  }, [])
-
-  const deleteAnnouncement = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/admin/announcements/${id}`, {
-        method: 'DELETE'
-      })
-      if (res.ok) {
-        setAnnouncements(prev => prev.filter(a => a.id !== id))
-        return true
-      }
-      return false
-    } catch (error) {
-      console.error('[store] Failed to delete announcement:', error)
-      return false
-    }
-  }, [])
-
   const addFeedback = useCallback(async (
     feedbackData: Pick<OrderFeedback, 'orderId' | 'rating' | 'comment'>
   ): Promise<{ ok: boolean; error?: string }> => {
@@ -470,8 +431,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addOrder,
     updateOrderStatus,
     cancelOrder,
-    addAnnouncement,
-    deleteAnnouncement,
     addFeedback,
     refreshProducts,
     refreshOrders,
@@ -481,7 +440,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }), [
     products, orders, adminOrders, inventoryLogs, announcements, feedbacks, isLoading,
     updateProduct, addProduct, deleteProduct, updateStock, addOrder, updateOrderStatus,
-    cancelOrder, addAnnouncement, deleteAnnouncement, addFeedback, refreshProducts, refreshOrders,
+    cancelOrder, addFeedback, refreshProducts, refreshOrders,
     refreshAdminOrders, refreshInventoryLogs, refreshAnnouncements,
   ])
 

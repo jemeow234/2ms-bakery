@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { serverError, getVerifiedUser } from '@/lib/api'
 
+// Ratings at or below this need a reason so the bakery knows what to fix.
+const LOW_RATING = 2
+
 const feedbackSchema = z.object({
   orderId: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
@@ -23,6 +26,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Please choose a rating from 1 to 5.' }, { status: 400 })
     }
     const { orderId, rating, comment } = parsed.data
+
+    if (rating <= LOW_RATING && !comment) {
+      return NextResponse.json(
+        { error: 'Please tell us what went wrong so we can do better.' },
+        { status: 400 }
+      )
+    }
 
     // RLS only accepts feedback on an order that belongs to the caller.
     const { data, error } = await supabase

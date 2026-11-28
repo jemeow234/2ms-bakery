@@ -26,8 +26,8 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
       <DialogContent className="bg-background max-w-md">
         <DialogHeader>
           <p className="text-sm font-medium text-primary">
-            <span aria-hidden="true">{announcement.type === 'announcement' ? '📢 ' : '🎉 '}</span>
-            {announcement.type === 'announcement' ? 'Announcement' : 'Special Offer'}
+            <span aria-hidden="true">📢 </span>
+            Announcement
           </p>
           <DialogTitle className="text-xl font-serif font-bold text-foreground">
             {announcement.title}
@@ -40,7 +40,7 @@ export function AnnouncementModal({ isOpen, onClose }: AnnouncementModalProps) {
           <img
             src={announcement.image}
             alt=""
-            className="w-full h-40 object-cover rounded-lg"
+            className="w-full max-h-64 object-cover rounded-lg"
           />
         )}
 

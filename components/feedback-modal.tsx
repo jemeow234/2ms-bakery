@@ -17,6 +17,9 @@ import { Order } from '@/lib/types'
 import { useStore } from '@/context/store-context'
 import { cn } from '@/lib/utils'
 
+// Ratings at or below this need a reason (also enforced by the API).
+const LOW_RATING = 2
+
 interface FeedbackModalProps {
   order: Order
   isOpen: boolean
@@ -29,11 +32,17 @@ export function FeedbackModal({ order, isOpen, onClose }: FeedbackModalProps) {
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showReasonError, setShowReasonError] = useState(false)
   const { addFeedback } = useStore()
+  const needsReason = rating <= LOW_RATING
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
+    if (needsReason && !comment.trim()) {
+      setShowReasonError(true)
+      return
+    }
     setIsSubmitting(true)
 
     const { ok, error } = await addFeedback({ orderId: order.id, rating, comment })
@@ -47,6 +56,7 @@ export function FeedbackModal({ order, isOpen, onClose }: FeedbackModalProps) {
     toast.success('Thanks for your feedback!')
     setRating(5)
     setComment('')
+    setShowReasonError(false)
     onClose()
   }
 
@@ -84,24 +94,45 @@ export function FeedbackModal({ order, isOpen, onClose }: FeedbackModalProps) {
 
           <div>
             <Label htmlFor="feedback-comment" className="text-sm text-muted-foreground mb-2">
-              Additional Comments (Optional)
+              {needsReason ? (
+                <>
+                  What went wrong? <span className="text-destructive">(Required)</span>
+                </>
+              ) : (
+                'Additional Comments (Optional)'
+              )}
             </Label>
             <Textarea
               id="feedback-comment"
               value={comment}
-              onChange={e => setComment(e.target.value)}
-              placeholder="Tell us about your experience..."
+              onChange={e => {
+                setComment(e.target.value)
+                if (e.target.value.trim()) setShowReasonError(false)
+              }}
+              placeholder={
+                needsReason
+                  ? 'Please tell us the reason for your rating so we can improve...'
+                  : 'Tell us about your experience...'
+              }
               maxLength={1000}
               rows={4}
-              className="resize-none bg-card"
+              required={needsReason}
+              aria-invalid={showReasonError}
+              aria-describedby={showReasonError ? 'feedback-reason-error' : undefined}
+              className={cn('resize-none bg-card', showReasonError && 'border-destructive focus-visible:ring-destructive')}
             />
+            {showReasonError && (
+              <p id="feedback-reason-error" role="alert" className="mt-1.5 text-sm text-destructive">
+                Please give a reason for a {rating}-star rating.
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Skip
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
+            <Button type="submit" disabled={isSubmitting || (needsReason && !comment.trim())} className="flex-1">
               {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
             </Button>
           </div>

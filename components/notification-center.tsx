@@ -6,7 +6,7 @@ import { useStore } from '@/context/store-context'
 import { useAuth } from '@/context/auth-context'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { Bell, ShoppingBag, Truck, Store, Clock, Mail, Megaphone, MessageSquare, LogIn } from 'lucide-react'
+import { Bell, ShoppingBag, Truck, Store, Clock, Mail, Megaphone, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { shortOrderNumber } from '@/lib/orders'
 
@@ -36,12 +36,13 @@ export function NotificationCenter() {
   // The badge counts orders still on their way; cancelled ones are done too.
   const unreadOrders = userOrders.filter(o => o.status === 'pending' || o.status === 'processing').length
   const unseenAnnouncements = announcements.filter(a =>
-    !lastSeenAnnouncementAt || new Date(a.createdAt).getTime() > new Date(lastSeenAnnouncementAt).getTime()
+    !lastSeenAnnouncementAt || new Date(a.startsAt).getTime() > new Date(lastSeenAnnouncementAt).getTime()
   ).length
   const totalUnread = unreadOrders + unseenAnnouncements
 
   const markAnnouncementsSeen = () => {
-    const latest = announcements[0]?.createdAt
+    // Sorted by start time, so a scheduled one counts as new once it goes live.
+    const latest = announcements[0]?.startsAt
     if (!latest) return
     try {
       localStorage.setItem(LAST_SEEN_KEY, latest)
@@ -238,7 +239,7 @@ export function NotificationCenter() {
                 </div>
                 <p className="text-foreground font-medium mb-1">No news yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Announcements and offers will show up here.
+                  Announcements will show up here.
                 </p>
               </div>
             ) : (
@@ -248,18 +249,9 @@ export function NotificationCenter() {
                   className="rounded-xl border border-border hover:border-primary/30 hover:shadow-md transition-all duration-300 p-4"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={cn(
-                      'px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5',
-                      announcement.type === 'announcement'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-amber-100 text-amber-700'
-                    )}>
-                      {announcement.type === 'announcement' ? (
-                        <MessageSquare className="h-3 w-3" />
-                      ) : (
-                        <Megaphone className="h-3 w-3" />
-                      )}
-                      {announcement.type === 'announcement' ? 'Announcement' : 'Offer'}
+                    <div className="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 bg-blue-100 text-blue-700">
+                      <Megaphone className="h-3 w-3" />
+                      Announcement
                     </div>
                   </div>
                   {announcement.image && (
@@ -272,7 +264,8 @@ export function NotificationCenter() {
                   <p className="text-sm font-bold text-foreground mb-1">{announcement.title}</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">{announcement.message}</p>
                   <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
-                    {new Date(announcement.createdAt).toLocaleDateString()}
+                    {new Date(announcement.startsAt).toLocaleDateString()}
+                    {announcement.endsAt && ` · until ${new Date(announcement.endsAt).toLocaleDateString()}`}
                   </p>
                 </div>
               ))

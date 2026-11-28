@@ -62,8 +62,11 @@ export interface Announcement {
   id: string
   title: string
   message: string
-  type: 'announcement' | 'advertisement'
   image?: string
+  /** When customers start seeing it. */
+  startsAt: string
+  /** When it stops showing; absent means it stays up until deleted. */
+  endsAt?: string
   createdAt: string
   createdBy: string
 }

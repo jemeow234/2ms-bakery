@@ -1,26 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { serverError } from '@/lib/api'
-import type { Announcement } from '@/lib/types'
+import { toAnnouncement, type AnnouncementRow } from '@/lib/announcements'
 
-interface AnnouncementRow {
-  id: string
-  title: string
-  message: string
-  type: Announcement['type']
-  image: string | null
-  created_by: string | null
-  created_at: string
-}
-
+// Customers only see announcements inside their active window.
 export async function GET() {
   try {
     const supabase = await createClient()
+    const now = new Date().toISOString()
 
     const { data: announcements, error } = await supabase
       .from('announcements')
       .select('*')
-      .order('created_at', { ascending: false })
+      .lte('starts_at', now)
+      .or(`ends_at.is.null,ends_at.gt.${now}`)
+      .order('starts_at', { ascending: false })
 
     if (error) throw error
 
@@ -39,15 +33,7 @@ export async function GET() {
       }
     }
 
-    const mapped = rows.map(a => ({
-      id: a.id,
-      title: a.title,
-      message: a.message,
-      type: a.type,
-      image: a.image ?? undefined,
-      createdAt: a.created_at,
-      createdBy: (a.created_by && nameById.get(a.created_by)) || 'Admin',
-    }))
+    const mapped = rows.map(a => toAnnouncement(a, (a.created_by && nameById.get(a.created_by)) || 'Admin'))
 
     return NextResponse.json({ announcements: mapped })
   } catch (error) {
